@@ -58,6 +58,7 @@ interface DesignState {
   removeSelected: () => void;
   duplicateSelected: () => void;
   reorder: (id: string, dir: "up" | "down" | "top" | "bottom") => void;
+  reorderInsert: (id: string, visualInsertIndex: number) => void;
   setArtboardBg: (bg: DesignDocument["artboard"]["background"]) => void;
   resizeArtboard: (formatId: string, magic: boolean) => void;
   undo: () => void;
@@ -289,6 +290,22 @@ export const useDesign = create<DesignState>((set, get) => ({
     else if (dir === "up") nodes.splice(Math.min(i + 1, nodes.length), 0, item);
     else nodes.splice(Math.max(i - 1, 0), 0, item);
     set({ doc: { ...doc, nodes }, dirty: true });
+  },
+
+  reorderInsert: (id, visualInsertIndex) => {
+    const { doc } = get();
+    if (!doc) return;
+    const visual = [...doc.nodes].reverse();
+    const from = visual.findIndex((n) => n.id === id);
+    if (from < 0) return;
+    let to = Math.max(0, Math.min(visual.length, visualInsertIndex));
+    if (from === to || from + 1 === to) return;
+    get().commit();
+    const [item] = visual.splice(from, 1);
+    if (!item) return;
+    if (from < to) to -= 1;
+    visual.splice(to, 0, item);
+    set({ doc: { ...doc, nodes: visual.reverse() }, dirty: true });
   },
 
   setArtboardBg: (background) => {
