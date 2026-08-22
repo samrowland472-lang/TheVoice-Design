@@ -58,7 +58,8 @@ interface DesignState {
   removeSelected: () => void;
   duplicateSelected: () => void;
   reorder: (id: string, dir: "up" | "down" | "top" | "bottom") => void;
-  reorderInsert: (id: string, visualInsertIndex: number) => void;
+  /** Move node so it ends up at `toIndex` in the nodes array (0 = bottom of stack). */
+  reorderToIndex: (id: string, toIndex: number) => void;
   setArtboardBg: (bg: DesignDocument["artboard"]["background"]) => void;
   resizeArtboard: (formatId: string, magic: boolean) => void;
   undo: () => void;
@@ -292,20 +293,19 @@ export const useDesign = create<DesignState>((set, get) => ({
     set({ doc: { ...doc, nodes }, dirty: true });
   },
 
-  reorderInsert: (id, visualInsertIndex) => {
+  reorderToIndex: (id, toIndex) => {
     const { doc } = get();
     if (!doc) return;
-    const visual = [...doc.nodes].reverse();
-    const from = visual.findIndex((n) => n.id === id);
+    const nodes = [...doc.nodes];
+    const from = nodes.findIndex((n) => n.id === id);
     if (from < 0) return;
-    let to = Math.max(0, Math.min(visual.length, visualInsertIndex));
-    if (from === to || from + 1 === to) return;
+    const clamped = Math.max(0, Math.min(toIndex, nodes.length - 1));
+    if (from === clamped) return;
     get().commit();
-    const [item] = visual.splice(from, 1);
+    const [item] = nodes.splice(from, 1);
     if (!item) return;
-    if (from < to) to -= 1;
-    visual.splice(to, 0, item);
-    set({ doc: { ...doc, nodes: visual.reverse() }, dirty: true });
+    nodes.splice(clamped, 0, item);
+    set({ doc: { ...doc, nodes }, dirty: true });
   },
 
   setArtboardBg: (background) => {
