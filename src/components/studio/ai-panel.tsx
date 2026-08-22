@@ -28,20 +28,26 @@ export function AiPanel() {
           prompt,
           width: doc.artboard.width,
           height: doc.artboard.height,
-          brandColors: brand.colors,
-          displayFont: brand.fonts[0],
-          bodyFont: brand.fonts[1],
+          brandColors: brand.colors.map((c) => c.hex),
+          displayFont: brand.displayFont,
+          bodyFont: brand.bodyFont,
         },
       });
       let rawNodes: Record<string, unknown>[];
       if (!res.ok) {
-        rawNodes = fallbackLayout(prompt, doc.artboard.width, doc.artboard.height, brand.colors, brand.fonts);
+        rawNodes = fallbackLayout(
+          prompt,
+          doc.artboard.width,
+          doc.artboard.height,
+          brand.colors.map((c) => c.hex),
+          [brand.displayFont, brand.bodyFont],
+        );
         toast.message("Director offline — local layout ready to preview");
       } else {
         rawNodes = res.nodes as Record<string, unknown>[];
       }
       const nodes = rawNodes.map((raw) =>
-        normalizeNode(raw, doc.artboard.width, doc.artboard.height, brand.fonts[0], brand.fonts[1]),
+        normalizeNode(raw, doc.artboard.width, doc.artboard.height, brand.displayFont, brand.bodyFont),
       );
       setPreview(nodes);
     } finally {
