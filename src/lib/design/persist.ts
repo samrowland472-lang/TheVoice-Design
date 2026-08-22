@@ -15,12 +15,21 @@ function readJson<T>(key: string, fallback: T): T {
   }
 }
 
+function sortIndex(index: ProjectMeta[]): ProjectMeta[] {
+  return [...index].sort((a, b) => {
+    const ap = a.pinned ? 1 : 0;
+    const bp = b.pinned ? 1 : 0;
+    if (ap !== bp) return bp - ap;
+    return b.updatedAt - a.updatedAt;
+  });
+}
+
 export function loadIndex(): ProjectMeta[] {
-  return readJson<ProjectMeta[]>(INDEX_KEY, []);
+  return sortIndex(readJson<ProjectMeta[]>(INDEX_KEY, []));
 }
 
 export function saveIndex(index: ProjectMeta[]) {
-  localStorage.setItem(INDEX_KEY, JSON.stringify(index));
+  localStorage.setItem(INDEX_KEY, JSON.stringify(sortIndex(index)));
 }
 
 export function loadDoc(id: string): DesignDocument | null {
@@ -44,6 +53,7 @@ export function saveDoc(doc: DesignDocument) {
       localStorage.setItem(DOCS_KEY, JSON.stringify(next));
     }
   }
+  const prev = loadIndex().find((p) => p.id === doc.id);
   const index = loadIndex().filter((p) => p.id !== doc.id);
   index.unshift({
     id: doc.id,
@@ -53,8 +63,17 @@ export function saveDoc(doc: DesignDocument) {
     height: doc.artboard.height,
     updatedAt: doc.updatedAt,
     thumbnail: doc.thumbnail,
+    pinned: prev?.pinned,
+    folder: prev?.folder,
+    tags: prev?.tags,
   });
   saveIndex(index.slice(0, 40));
+}
+
+export function patchIndex(id: string, patch: Partial<ProjectMeta>) {
+  const index = loadIndex().map((p) => (p.id === id ? { ...p, ...patch } : p));
+  saveIndex(index);
+  return loadIndex();
 }
 
 export function deleteDoc(id: string) {
