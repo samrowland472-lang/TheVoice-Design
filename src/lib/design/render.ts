@@ -133,10 +133,23 @@ export function drawNode(ctx: CanvasRenderingContext2D, n: DesignNode) {
     const img = getCachedImage(n.src);
     if (img) {
       ctx.save();
+      roundRect(ctx, n.x, n.y, n.w, n.h, n.radius);
+      ctx.clip();
       if (n.filters.blur || n.filters.brightness !== 1 || n.filters.contrast !== 1 || n.filters.saturate !== 1) {
         ctx.filter = `brightness(${n.filters.brightness}) contrast(${n.filters.contrast}) saturate(${n.filters.saturate}) blur(${n.filters.blur}px)`;
       }
-      ctx.drawImage(img, n.x, n.y, n.w, n.h);
+      const nw = img.naturalWidth || img.width;
+      const nh = img.naturalHeight || img.height;
+      const c = n.crop;
+      if (c && c.w > 0 && c.h > 0 && nw > 0 && nh > 0) {
+        const sx = Math.max(0, Math.min(nw - 1, c.x * nw));
+        const sy = Math.max(0, Math.min(nh - 1, c.y * nh));
+        const sw = Math.max(1, Math.min(nw - sx, c.w * nw));
+        const sh = Math.max(1, Math.min(nh - sy, c.h * nh));
+        ctx.drawImage(img, sx, sy, sw, sh, n.x, n.y, n.w, n.h);
+      } else {
+        ctx.drawImage(img, n.x, n.y, n.w, n.h);
+      }
       ctx.restore();
     } else {
       applyFill(ctx, "#1a201c", n.x, n.y, n.w, n.h);
