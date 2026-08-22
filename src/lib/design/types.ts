@@ -138,6 +138,8 @@ export interface DesignDocument {
   thumbnail?: string;
   /** Manual ruler guides in artboard space. */
   guides?: { id: string; axis: "x" | "y"; pos: number }[];
+  /** Shared id for a campaign set (story + square + banner). */
+  campaignId?: string;
 }
 
 export interface ProjectMeta {
@@ -152,14 +154,24 @@ export interface ProjectMeta {
   pinned?: boolean;
   folder?: string;
   tags?: string[];
+  campaignId?: string;
+}
+
+export interface BrandColor {
+  name: string;
+  hex: string;
 }
 
 export interface BrandKit {
-  colors: string[];
-  fonts: string[];
   name: string;
-  /** Hex → display name for brand swatches. */
-  colorNames?: Record<string, string>;
+  /** Named brand colours — used by inspector swatches and new ink. */
+  colors: BrandColor[];
+  /** Preferred display (headline) font family. */
+  displayFont: string;
+  /** Preferred body font family. */
+  bodyFont: string;
+  /** Extra brand fonts available in the pairing list. */
+  fonts: string[];
 }
 
 export interface Viewport {
