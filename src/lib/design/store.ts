@@ -72,7 +72,7 @@ interface DesignState {
   toggleSnap: () => void;
   applyNodes: (nodes: DesignNode[]) => void;
   translateSelected: (dx: number, dy: number) => void;
-  alignSelected: (edge: "left" | "center" | "right" | "top" | "middle" | "bottom") => void;
+  alignSelected: (edge: "left" | "center" | "right" | "top" | "middle" | "bottom", relative?: "selection" | "artboard") => void;
   copySelected: () => void;
   cutSelected: () => void;
   pasteClipboard: () => void;
@@ -422,13 +422,14 @@ export const useDesign = create<DesignState>((set, get) => ({
     });
   },
 
-  alignSelected: (edge) => {
+  alignSelected: (edge, relative) => {
     const { doc, selection } = get();
     if (!doc || !selection.length) return;
     get().commit();
     const ids = new Set(selection);
     const selected = doc.nodes.filter((n) => ids.has(n.id));
-    const box = selected.length > 1 ? aabb(selected) : { x: 0, y: 0, w: doc.artboard.width, h: doc.artboard.height };
+    const toSelection = relative === "selection" || (relative !== "artboard" && selected.length > 1);
+    const box = toSelection ? aabb(selected) : { x: 0, y: 0, w: doc.artboard.width, h: doc.artboard.height };
     set({
       doc: {
         ...doc,

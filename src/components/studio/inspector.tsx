@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { CANVAS_FONTS } from "@/lib/design/fonts";
 import { useDesign } from "@/lib/design/store";
 import type { Align, BlendMode, DesignNode, GradientFill, ImageNode, TextNode } from "@/lib/design/types";
 import { isGradient, isImage } from "@/lib/design/types";
+import { cn } from "@/lib/utils";
 
 const BLENDS: BlendMode[] = [
   "source-over",
@@ -25,6 +27,7 @@ export function Inspector() {
   const rotateSelected = useDesign((s) => s.rotateSelected);
   const distributeSelected = useDesign((s) => s.distributeSelected);
   const alignSelected = useDesign((s) => s.alignSelected);
+  const [alignToBoard, setAlignToBoard] = useState(false);
 
   if (!doc) return null;
   const node = selection[0] ? doc.nodes.find((n) => n.id === selection[0]) : null;
@@ -148,14 +151,44 @@ export function Inspector() {
           {node.kind === "text" && <TextFields node={node} />}
           {isImage(node) && <ImageFields node={node} />}
 
-          <Field label={selection.length > 1 ? "Align selection" : "Align to artboard"}>
+          <Field label="Align">
+            <div className="mb-1 grid grid-cols-2 gap-1">
+              <button
+                type="button"
+                disabled={selection.length < 2}
+                className={cn(
+                  "h-7 rounded-[8px] text-[10px]",
+                  selection.length >= 2 && !alignToBoard
+                    ? "bg-phosphor/15 text-phosphor"
+                    : "border border-border text-ink-dim",
+                  selection.length < 2 && "opacity-40",
+                )}
+                onClick={() => setAlignToBoard(false)}
+              >
+                Selection
+              </button>
+              <button
+                type="button"
+                className={cn(
+                  "h-7 rounded-[8px] text-[10px]",
+                  alignToBoard || selection.length < 2
+                    ? "bg-phosphor/15 text-phosphor"
+                    : "border border-border text-ink-dim",
+                )}
+                onClick={() => setAlignToBoard(true)}
+              >
+                Artboard
+              </button>
+            </div>
             <div className="grid grid-cols-3 gap-1">
               {(["left", "center", "right", "top", "middle", "bottom"] as const).map((edge) => (
                 <button
                   key={edge}
                   type="button"
                   className="h-8 rounded-[8px] border border-border text-[10px] text-ink-dim capitalize hover:border-phosphor hover:text-ink"
-                  onClick={() => alignSelected(edge)}
+                  onClick={() =>
+                    alignSelected(edge, selection.length > 1 && !alignToBoard ? "selection" : "artboard")
+                  }
                 >
                   {edge}
                 </button>
