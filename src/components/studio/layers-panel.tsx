@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Eye, EyeOff, Lock, Unlock } from "lucide-react";
+import { useRef, useState } from "react";
+import { Eye, EyeOff, GripVertical, Lock, Unlock } from "lucide-react";
 import { useDesign } from "@/lib/design/store";
 import { cn } from "@/lib/utils";
 
@@ -9,93 +9,99 @@ export function LayersPanel() {
   const select = useDesign((s) => s.select);
   const updateNodes = useDesign((s) => s.updateNodes);
   const reorder = useDesign((s) => s.reorder);
-  const reorderToIndex = useDesign((s) => s.reorderToIndex);
-
-  const [dragId, setDragId] = useState<string | null>(null);
-  const [overId, setOverId] = useState<string | null>(null);
+  const reorderInsert = useDesign((s) => s.reorderInsert);
+  const listRef = useRef<HTMLUListElement>(null);
+  const dragIdsRef = useRef<string[] | null>(null);
+  const [dragIds, setDragIds] = useState<string[] | null>(null);
+  const [dropAt, setDropAt] = useState<number | null>(null);
 
   if (!doc) return null;
-  // Visual list: top of panel = top of z-order = last in nodes[]
   const layers = [...doc.nodes].reverse();
+  const draggingSet = dragIds ? new Set(dragIds) : null;
 
-  const onDragStart = (e: React.DragEvent, id: string) => {
-    setDragId(id);
-    e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", id);
-  };
-
-  const onDragEnd = () => {
-    setDragId(null);
-    setOverId(null);
-  };
-
-  const onDragOver = (e: React.DragEvent, id: string) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    if (id !== overId) setOverId(id);
-  };
-
-  const onDragLeave = (e: React.DragEvent, id: string) => {
-    if (e.currentTarget === e.target && overId === id) setOverId(null);
-  };
-
-  const onDrop = (e: React.DragEvent, targetId: string, targetVisualIndex: number) => {
-    e.preventDefault();
-    const id = e.dataTransfer.getData("text/plain") || dragId;
-    if (!id || id === targetId) {
-      setDragId(null);
-      setOverId(null);
-      return;
+  const indexFromY = (clientY: number) => {
+    const items = listRef.current?.querySelectorAll<HTMLElement>("[data-layer-id]");
+    if (!items?.length) return 0;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (!item) continue;
+      const r = item.getBoundingClientRect();
+      if (clientY < r.top + r.height / 2) return i;
     }
-    // nodes[]: 0 = bottom, length-1 = top. Visual index 0 = top.
-    const toIndex = doc.nodes.length - 1 - targetVisualIndex;
-    reorderToIndex(id, toIndex);
-    setDragId(null);
-    setOverId(null);
+    return items.length;
+  };
+
+  const autoScroll = (clientY: number) => {
+    const list = listRef.current;
+    if (!list || list.scrollHeight <= list.clientHeight + 1) return;
+    const r = list.getBoundingClientRect();
+    if (clientY < r.top || clientY > r.bottom) return;
+    const edge = 16;
+    if (clientY < r.top + edge) list.scrollTop -= 8;
+    else if (clientY > r.bottom - edge) list.scrollTop += 8;
+  };
+
+  const finish = (clientY: number) => {
+    const ids = dragIdsRef.current;
+    if (ids?.length) reorderInsert(ids, indexFromY(clientY));
+    dragIdsRef.current = null;
+    setDragIds(null);
+    setDropAt(null);
   };
 
   return (
     <div className="flex min-h-0 flex-col">
       <div className="px-3 py-2 font-mono text-[10px] tracking-[0.2em] text-ink-faint uppercase">Layers</div>
-      <ul className="min-h-0 flex-1 overflow-auto px-2 pb-2 scrollbar-thin">
-        {layers.map((n, visualIndex) => {
+      <ul ref={listRef} className="min-h-0 flex-1 overflow-auto px-2 pb-2 scrollbar-thin">
+        {layers.map((n, i) => {
           const active = selection.includes(n.id);
-          const isDragging = dragId === n.id;
-          const isOver = overId === n.id && dragId !== n.id;
+          const dragging = draggingSet?.has(n.id) ?? false;
           return (
-            <li key={n.id}>
+            <li key={n.id} data-layer-id={n.id} className="relative">
+              {dropAt === i && (
+                <span className="pointer-events-none absolute inset-x-1 -top-px z-10 h-0.5 rounded-full bg-phosphor" />
+              )}
               <div
-                onDragOver={(e) => onDragOver(e, n.id)}
-                onDragLeave={(e) => onDragLeave(e, n.id)}
-                onDrop={(e) => onDrop(e, n.id, visualIndex)}
                 className={cn(
-                  "flex h-9 items-center gap-1 rounded-[8px] px-1 text-xs",
+                  "flex h-9 items-center gap-0.5 rounded-[8px] px-0.5 text-xs",
                   active ? "bg-phosphor/10 text-ink" : "text-ink-dim hover:bg-surface-alt",
-                  isDragging && "opacity-40",
-                  isOver && "ring-1 ring-phosphor/50 bg-phosphor/5",
+                  dragging && "opacity-40",
                 )}
               >
                 <span
-                  draggable
-                  onDragStart={(e) => onDragStart(e, n.id)}
-                  onDragEnd={onDragEnd}
-                  className="flex size-5 shrink-0 cursor-grab items-center justify-center text-ink-faint active:cursor-grabbing"
-                  aria-label="Drag to reorder"
-                  title="Drag to reorder"
+                  className="grid size-7 shrink-0 cursor-grab place-items-center text-ink-faint touch-none select-none active:cursor-grabbing"
+                  aria-label="Reorder layer"
+                  onPointerDown={(e) => {
+                    if (e.button !== 0) return;
+                    e.currentTarget.setPointerCapture(e.pointerId);
+                    const sel = useDesign.getState().selection;
+                    const group = sel.includes(n.id) && sel.length > 1 ? sel : [n.id];
+                    dragIdsRef.current = group;
+                    setDragIds(group);
+                    setDropAt(i);
+                    if (!sel.includes(n.id)) select([n.id]);
+                  }}
+                  onPointerMove={(e) => {
+                    if (!dragIdsRef.current) return;
+                    autoScroll(e.clientY);
+                    setDropAt(indexFromY(e.clientY));
+                  }}
+                  onPointerUp={(e) => {
+                    if (!dragIdsRef.current) return;
+                    finish(e.clientY);
+                  }}
+                  onPointerCancel={() => {
+                    dragIdsRef.current = null;
+                    setDragIds(null);
+                    setDropAt(null);
+                  }}
                 >
-                  <svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor" aria-hidden>
-                    <circle cx="3" cy="3" r="1.2" />
-                    <circle cx="7" cy="3" r="1.2" />
-                    <circle cx="3" cy="7" r="1.2" />
-                    <circle cx="7" cy="7" r="1.2" />
-                    <circle cx="3" cy="11" r="1.2" />
-                    <circle cx="7" cy="11" r="1.2" />
-                  </svg>
+                  <GripVertical className="size-3.5" />
                 </span>
                 <button
                   type="button"
                   className="min-w-0 flex-1 truncate px-1 text-left"
-                  onClick={() => select([n.id])}
+                  onClick={(e) => select([n.id], e.shiftKey)}
                 >
                   {n.name || n.kind}
                 </button>
@@ -135,6 +141,11 @@ export function LayersPanel() {
             </li>
           );
         })}
+        {dropAt === layers.length && layers.length > 0 && (
+          <li className="relative h-2">
+            <span className="pointer-events-none absolute inset-x-1 top-0 h-0.5 rounded-full bg-phosphor" />
+          </li>
+        )}
         {layers.length === 0 && <li className="px-2 py-6 text-center text-xs text-ink-faint">Empty artboard</li>}
       </ul>
     </div>

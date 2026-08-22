@@ -58,8 +58,7 @@ interface DesignState {
   removeSelected: () => void;
   duplicateSelected: () => void;
   reorder: (id: string, dir: "up" | "down" | "top" | "bottom") => void;
-  /** Move node so it ends up at `toIndex` in the nodes array (0 = bottom of stack). */
-  reorderToIndex: (id: string, toIndex: number) => void;
+  reorderInsert: (ids: string | string[], visualInsertIndex: number) => void;
   setArtboardBg: (bg: DesignDocument["artboard"]["background"]) => void;
   resizeArtboard: (formatId: string, magic: boolean) => void;
   undo: () => void;
@@ -293,19 +292,27 @@ export const useDesign = create<DesignState>((set, get) => ({
     set({ doc: { ...doc, nodes }, dirty: true });
   },
 
-  reorderToIndex: (id, toIndex) => {
+  reorderInsert: (ids, visualInsertIndex) => {
     const { doc } = get();
     if (!doc) return;
-    const nodes = [...doc.nodes];
-    const from = nodes.findIndex((n) => n.id === id);
-    if (from < 0) return;
-    const clamped = Math.max(0, Math.min(toIndex, nodes.length - 1));
-    if (from === clamped) return;
+    const idList = Array.isArray(ids) ? ids : [ids];
+    if (!idList.length) return;
+    const idSet = new Set(idList);
+    const visual = [...doc.nodes].reverse();
+    const moving = visual.filter((n) => idSet.has(n.id));
+    if (!moving.length) return;
+    const start = visual.findIndex((n) => idSet.has(n.id));
+    const contiguous = moving.every((n, i) => visual[start + i]?.id === n.id);
+    if (contiguous && (visualInsertIndex === start || visualInsertIndex === start + moving.length)) return;
+    let removedBefore = 0;
+    for (let i = 0; i < visualInsertIndex && i < visual.length; i++) {
+      if (idSet.has(visual[i]!.id)) removedBefore += 1;
+    }
     get().commit();
-    const [item] = nodes.splice(from, 1);
-    if (!item) return;
-    nodes.splice(clamped, 0, item);
-    set({ doc: { ...doc, nodes }, dirty: true });
+    const rest = visual.filter((n) => !idSet.has(n.id));
+    const to = Math.max(0, Math.min(rest.length, visualInsertIndex - removedBefore));
+    rest.splice(to, 0, ...moving);
+    set({ doc: { ...doc, nodes: rest.reverse() }, dirty: true });
   },
 
   setArtboardBg: (background) => {
