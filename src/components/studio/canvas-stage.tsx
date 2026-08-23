@@ -880,6 +880,11 @@ export function CanvasStage() {
           </button>
         </div>
       )}
+      {tool === "eyedropper" && (
+        <div className="pointer-events-none absolute bottom-14 left-1/2 z-10 -translate-x-1/2 rounded-[8px] border border-border bg-surface/90 px-3 py-1.5 font-mono text-[10px] tracking-wide text-ink-dim uppercase">
+          Click sample · kit chip saves · Shift+click save to brand
+        </div>
+      )}
       {tool === "pen" && (
         <div className="pointer-events-none absolute bottom-14 left-1/2 z-10 -translate-x-1/2 rounded-[8px] border border-border bg-surface/90 px-3 py-1.5 font-mono text-[10px] tracking-wide text-ink-dim uppercase">
           Click add · ⌫ last point · Enter close · Esc finish
