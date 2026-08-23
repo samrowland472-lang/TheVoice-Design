@@ -142,7 +142,7 @@ export interface DesignDocument {
   guides?: { id: string; axis: "x" | "y"; pos: number }[];
   /** Shared id for a campaign set (story + square + banner). */
   campaignId?: string;
-  /** Speaker notes shown in present mode. */
+  /** Present-mode speaker notes (local only). */
   notes?: string;
 }
 
