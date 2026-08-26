@@ -42,12 +42,12 @@ export function smartSnap(
   const gx: number[] = [];
   const gy: number[] = [];
 
-  for (const mx of [m.l, m.c, m.r]) {
-    for (const tx of xs) {
-      const d = Math.abs(tx - mx);
+  for (const tx of xs) {
+    for (const my of [m.l, m.c, m.r]) {
+      const d = Math.abs(tx - my);
       if (d < bestX) {
         bestX = d;
-        dx = tx - mx;
+        dx = tx - my;
         gx.length = 0;
         gx.push(tx);
       } else if (d === bestX && d <= threshold) {
@@ -55,8 +55,8 @@ export function smartSnap(
       }
     }
   }
-  for (const my of [m.t, m.m, m.b]) {
-    for (const ty of ys) {
+  for (const ty of ys) {
+    for (const my of [m.t, m.m, m.b]) {
       const d = Math.abs(ty - my);
       if (d < bestY) {
         bestY = d;
@@ -84,4 +84,17 @@ export function rectsIntersect(
   b: { x: number; y: number; w: number; h: number },
 ) {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+/** Axis-aligned world bounds of a node, rotation-aware via corner transform. */
+export function nodeWorldAabb(n: DesignNode): { x: number; y: number; w: number; h: number } {
+  return aabb([n]);
+}
+
+/** Marquee (axis-aligned) hits a node if it intersects the node's rotated world AABB. */
+export function marqueeHitsNode(
+  n: DesignNode,
+  mq: { x: number; y: number; w: number; h: number },
+): boolean {
+  return rectsIntersect(nodeWorldAabb(n), mq);
 }
