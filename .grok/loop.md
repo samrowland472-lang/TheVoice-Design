@@ -11,7 +11,7 @@ If the previous iteration is < 4 minutes old, polish that slice or skip. Never p
 ## GitHub (required)
 
 Repo of record: **https://github.com/samrowland472-lang/TheVoice** — folder `design/`.
-Confirm file sizes after push (`types.ts` / `store.ts` / `render.ts` must be KB, not 11 bytes).
+Confirm file sizes after push (`types.ts` / `store.ts` / `render.ts` / `canvas-stage.tsx` / `export.ts` must be KB, not 11 bytes).
 
 ## Product
 
@@ -21,34 +21,30 @@ Auth OFF, DB OFF.
 
 ## Backlog (priority order)
 
-1. Multi-select marquee polish / keyboard nudge feedback.
+1. Rotation-aware boolean polish on already-holed path nodes (keep hole winding after rotate + second subtract).
+2. Boolean preview ghost on the board before commit.
+3. Intersect / exclude (xor) beside Union and Subtract.
+4. Inspector multi-select: mixed fill/stroke when several layers are selected.
 
 ## Done
 
 - Hub, studio chrome, canvas tools, inspector, present, export PNG/JPG/SVG.
-- Canvas stage restored from placeholder wipe; eyedropper HUD re-applied under the board.
-- Full canvas-stage restored (35kb) after GitHub stub; eyedropper HUD: Click sample · kit chip · Shift+click.
-- Zoom to selection (fit selected layers in view): Shift+0, command palette, context menu, Shift-click zoom %.
-- Export selection as PNG (cropped AABB, transparent bg): Export menu, command palette, context menu.
+- Canvas stage restored; eyedropper HUD under the board.
+- Zoom to selection: Shift+0, command palette, context menu.
+- Export selection as PNG.
+- Boolean helpers live in boolean-ops.ts.
+- Multi-select marquee polish + keyboard nudge feedback.
 
 ## Iterations
 
-### 2026-08-23T20:20Z — loop 37
+### 2026-08-28T22:20Z — loop 53
 
-Restored full `store.ts` (was truncated on TheVoice main). Completed zoom-to-selection wiring (`requestFitSelection`, `fitBoxViewport`, ⇧0, palette, context, Shift-click zoom %). **Export selection as PNG**: `exportSelectionPng` crops selected layers to AABB (rotation-aware), transparent background; Export menu "Selection PNG", command palette "Export selection as PNG", context menu. Typecheck + build + smoke clean.
+**Marquee + nudge.** Restored wiped `canvas-stage.tsx` / `export.ts`. Marquee is rotation-aware (`marqueeHitsNode` / `marqueeContainsNode`); live-selects while dragging; Shift unions with the current selection; Alt requires full contain (dashed marquee). HUD under the board shows count + mode. Arrow nudge commits history once per hold (`!repeat`), Shift = 10px, Alt = 0.5px; phosphor HUD shows cumulative Δx/Δy then fades. Typecheck + build + smoke clean.
 
-### 2026-08-23T17:05Z — loop 36
+### 2026-08-28T20:20Z — loop 52
 
-Zoom to selection. `requestFitSelection` + `fitBoxViewport`; AABB of selected nodes (incl. rotation). Wire: ⇧0, command palette "Zoom to selection", context menu, Shift-click zoom %. Empty selection falls back to fit artboard. Typecheck + build + smoke clean.
-
-### 2026-08-23T14:20Z — loop 35
-
-Restored full canvas-stage (was 4kb stub on GitHub). Eyedropper HUD under the board. Typecheck + build + smoke clean.
-
-### 2026-08-23T13:19Z — loop 34
-
-Restored `canvas-stage.tsx` after placeholder wipe (was 20 bytes). Re-applied eyedropper HUD under the board. Typecheck + build + smoke clean.
+Restore wiped stage + concave boolean clip (Greiner–Hormann).
 
 ## Next recommended
 
-Multi-select marquee polish / keyboard nudge feedback.
+Rotation-aware second-pass subtract on already-holed combined paths; optional intersect/exclude.
