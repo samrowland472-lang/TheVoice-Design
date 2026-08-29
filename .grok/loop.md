@@ -21,10 +21,8 @@ Auth OFF, DB OFF.
 
 ## Backlog (priority order)
 
-1. Rotation-aware boolean polish on already-holed path nodes (keep hole winding after rotate + second subtract).
-2. Boolean preview ghost on the board before commit.
-3. Intersect / exclude (xor) beside Union and Subtract.
-4. Inspector multi-select: mixed fill/stroke when several layers are selected.
+1. Boolean preview ghost on the board before commit (hover Union/Subtract).
+2. Rotation-aware second-pass subtract on holed path nodes.
 
 ## Done
 
@@ -34,17 +32,14 @@ Auth OFF, DB OFF.
 - Export selection as PNG.
 - Boolean helpers live in boolean-ops.ts.
 - Multi-select marquee polish + keyboard nudge feedback.
+- Inspector mixed fill/stroke when several layers are selected.
 
 ## Iterations
 
-### 2026-08-28T22:20Z — loop 53
+### 2026-08-29T18:10Z — loop 64
 
-**Marquee + nudge.** Restored wiped `canvas-stage.tsx` / `export.ts`. Marquee is rotation-aware (`marqueeHitsNode` / `marqueeContainsNode`); live-selects while dragging; Shift unions with the current selection; Alt requires full contain (dashed marquee). HUD under the board shows count + mode. Arrow nudge commits history once per hold (`!repeat`), Shift = 10px, Alt = 0.5px; phosphor HUD shows cumulative Δx/Δy then fades. Typecheck + build + smoke clean.
-
-### 2026-08-28T20:20Z — loop 52
-
-Restore wiped stage + concave boolean clip (Greiner–Hormann).
+**Mixed fill/stroke inspector.** Shift-select two or more layers and the inspector opens a Selection block: fill, stroke, width, and opacity write across the set. Mixed values show a count chip and a blank width field; a colour pick or “Fill all with ink” unifies them. Restored PathPoint on path nodes so cubic path helpers typecheck. Typecheck + build + smoke clean.
 
 ## Next recommended
 
-Rotation-aware second-pass subtract on already-holed combined paths; optional intersect/exclude.
+Boolean preview ghost on the board before commit.
