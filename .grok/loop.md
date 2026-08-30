@@ -21,27 +21,19 @@ Auth OFF, DB OFF.
 
 ## Backlog (priority order)
 
-1. Export selection as SVG with holes and even-odd fill rule.
-2. Pen tangent overlay polish on subtract results.
+1. Path overlay: live cubic handles while drawing, not only after close.
+2. Inspector Boolean hover buttons wired to `setBooleanPreview`.
 
 ## Done
 
-- Hub, studio chrome, canvas tools, inspector, present, export PNG/JPG/SVG.
-- Boolean helpers in boolean-ops.ts; live inspector hover ghost.
-- Rotation-aware contours: cubic handles flattened, then rotated, before punch.
-- Overlapping subtract holes merge so even-odd does not refill.
-- Paths render holes and cubics with evenodd / nonzero.
+- Canvas overlay restored: marquee select, move + snap, create-drag shapes, pan, paint, pen rubber-band, handles, rulers.
 
 ## Iterations
 
-### 2026-08-30T02:25Z — loop 71
+### 2026-08-30T08:20Z — loop 77
 
-**Boolean ghost + rotation-aware holes.** Shift-select two or more shapes. Inspector Boolean: hover Union / Subtract / Intersect / Exclude to ghost the path on the board; click commits. First selected layer keeps ink. Pen curves are sampled before subtract so a rotated path punches the stroke, not the anchors. Typecheck + build + smoke clean.
-
-### 2026-08-30T00:08Z — loop 69
-
-**MixedInk wired.**
+**Canvas overlay restored.** Select-tool marquee and move are live again. Shape tools drag-create. Viewport pans with Hand or space.
 
 ## Next recommended
 
-Export selection as SVG with holes and even-odd fill rule.
+Path overlay: live cubic handles while drawing, not only after close.
