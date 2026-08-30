@@ -21,48 +21,27 @@ Auth OFF, DB OFF.
 
 ## Backlog (priority order)
 
-1. Boolean preview ghost polish (live hover on inspector Union/Subtract).
-2. Rotation-aware hole subtract polish on path nodes with mixed handles.
+1. Export selection as SVG with holes and even-odd fill rule.
+2. Pen tangent overlay polish on subtract results.
 
 ## Done
 
 - Hub, studio chrome, canvas tools, inspector, present, export PNG/JPG/SVG.
-- Canvas stage restored; eyedropper HUD under the board.
-- Zoom to selection: Shift+0, command palette.
-- Export selection as SVG (tight viewBox, paths keep holes).
-- Boolean helpers live in boolean-ops.ts.
-- Boolean preview ghost on the board before commit (hover Union/Subtract).
-- Rotation-aware second-pass subtract: overlapping holes union so even-odd does not refill.
-- Studio chrome restored (was returning null); viewport-aware drawDocument; applyBoolean + Selection SVG.
-- Pen tangent handles on the overlay (draw + drag in/out/anchor; Alt breaks smooth).
-- MixedInk panel wired when multi-select has mixed fills.
+- Boolean helpers in boolean-ops.ts; live inspector hover ghost.
+- Rotation-aware contours: cubic handles flattened, then rotated, before punch.
+- Overlapping subtract holes merge so even-odd does not refill.
+- Paths render holes and cubics with evenodd / nonzero.
 
 ## Iterations
 
+### 2026-08-30T02:25Z — loop 71
+
+**Boolean ghost + rotation-aware holes.** Shift-select two or more shapes. Inspector Boolean: hover Union / Subtract / Intersect / Exclude to ghost the path on the board; click commits. First selected layer keeps ink. Pen curves are sampled before subtract so a rotated path punches the stroke, not the anchors. Typecheck + build + smoke clean.
+
 ### 2026-08-30T00:08Z — loop 69
 
-**MixedInk wired.** Shift-select two or more layers and the inspector opens Selection · N layers: mixed fill/stroke/opacity chips, brand swatches, “Fill all with ink”, and “Clear strokes”. Click a layer’s colour chip to unify the set with that fill. PathPoint restored so cubic helpers typecheck. Typecheck + build + smoke clean.
-
-### 2026-08-29T23:20Z — loop 68
-
-**Pen tangent overlay.**
-
-### 2026-08-29T22:10Z — loop 67
-
-**Board + boolean + selection SVG.**
-
-### 2026-08-29T21:20Z — loop 66
-
-**Rotation-aware second-pass subtract.**
-
-### 2026-08-29T19:12Z — loop 65
-
-**Boolean preview ghost.**
-
-### 2026-08-29T18:10Z — loop 64
-
-**Mixed fill/stroke inspector.**
+**MixedInk wired.**
 
 ## Next recommended
 
-Boolean preview ghost polish (live hover on inspector Union/Subtract).
+Export selection as SVG with holes and even-odd fill rule.
