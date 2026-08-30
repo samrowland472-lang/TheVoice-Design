@@ -21,25 +21,48 @@ Auth OFF, DB OFF.
 
 ## Backlog (priority order)
 
-1. Boolean preview ghost on the board before commit (hover Union/Subtract).
-2. Rotation-aware second-pass subtract on holed path nodes.
+1. Boolean preview ghost polish (live hover on inspector Union/Subtract).
+2. Rotation-aware hole subtract polish on path nodes with mixed handles.
 
 ## Done
 
 - Hub, studio chrome, canvas tools, inspector, present, export PNG/JPG/SVG.
 - Canvas stage restored; eyedropper HUD under the board.
-- Zoom to selection: Shift+0, command palette, context menu.
-- Export selection as PNG.
+- Zoom to selection: Shift+0, command palette.
+- Export selection as SVG (tight viewBox, paths keep holes).
 - Boolean helpers live in boolean-ops.ts.
-- Multi-select marquee polish + keyboard nudge feedback.
-- Inspector mixed fill/stroke when several layers are selected.
+- Boolean preview ghost on the board before commit (hover Union/Subtract).
+- Rotation-aware second-pass subtract: overlapping holes union so even-odd does not refill.
+- Studio chrome restored (was returning null); viewport-aware drawDocument; applyBoolean + Selection SVG.
+- Pen tangent handles on the overlay (draw + drag in/out/anchor; Alt breaks smooth).
+- MixedInk panel wired when multi-select has mixed fills.
 
 ## Iterations
 
+### 2026-08-30T00:08Z — loop 69
+
+**MixedInk wired.** Shift-select two or more layers and the inspector opens Selection · N layers: mixed fill/stroke/opacity chips, brand swatches, “Fill all with ink”, and “Clear strokes”. Click a layer’s colour chip to unify the set with that fill. PathPoint restored so cubic helpers typecheck. Typecheck + build + smoke clean.
+
+### 2026-08-29T23:20Z — loop 68
+
+**Pen tangent overlay.**
+
+### 2026-08-29T22:10Z — loop 67
+
+**Board + boolean + selection SVG.**
+
+### 2026-08-29T21:20Z — loop 66
+
+**Rotation-aware second-pass subtract.**
+
+### 2026-08-29T19:12Z — loop 65
+
+**Boolean preview ghost.**
+
 ### 2026-08-29T18:10Z — loop 64
 
-**Mixed fill/stroke inspector.** Shift-select two or more layers and the inspector opens a Selection block: fill, stroke, width, and opacity write across the set. Mixed values show a count chip and a blank width field; a colour pick or “Fill all with ink” unifies them. Restored PathPoint on path nodes so cubic path helpers typecheck. Typecheck + build + smoke clean.
+**Mixed fill/stroke inspector.**
 
 ## Next recommended
 
-Boolean preview ghost on the board before commit.
+Boolean preview ghost polish (live hover on inspector Union/Subtract).

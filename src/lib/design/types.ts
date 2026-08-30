@@ -73,9 +73,7 @@ export interface BaseNode {
   strokeWidth: number;
   radius: number;
   shadow: Shadow | null;
-  /** Shared id — style/copy edits update every instance. Transform stays local. */
   linkId?: string;
-  /** Present hotspot: `doc:<id>` or a URL. */
   href?: string;
 }
 
@@ -94,7 +92,6 @@ export interface TextNode extends BaseNode {
 export interface ImageNode extends BaseNode {
   kind: "image";
   src: string;
-  /** Normalized source rect (0–1). Null = full image. */
   crop: { x: number; y: number; w: number; h: number } | null;
   filters: {
     brightness: number;
@@ -104,10 +101,21 @@ export interface ImageNode extends BaseNode {
   };
 }
 
+/** Anchor on a path. `in` / `out` are offsets from the anchor. */
+export interface PathPoint {
+  x: number;
+  y: number;
+  in?: { x: number; y: number } | null;
+  out?: { x: number; y: number } | null;
+  smooth?: boolean;
+}
+
 export interface PathNode extends BaseNode {
   kind: "path";
-  points: { x: number; y: number }[];
+  points: PathPoint[];
   closed: boolean;
+  holes?: PathPoint[][];
+  fillRule?: "evenodd" | "nonzero";
 }
 
 export interface PaintNode extends BaseNode {
@@ -128,7 +136,6 @@ export interface Artboard {
   background: Fill;
   name: string;
   formatId: string;
-  /** Extra pixels around PNG/JPG export (print bleed). */
   bleed?: number;
 }
 
@@ -140,11 +147,8 @@ export interface DesignDocument {
   updatedAt: number;
   createdAt: number;
   thumbnail?: string;
-  /** Manual ruler guides in artboard space. */
   guides?: { id: string; axis: "x" | "y"; pos: number }[];
-  /** Shared id for a campaign set (story + square + banner). */
   campaignId?: string;
-  /** Present-mode speaker notes (local only). */
   notes?: string;
 }
 
@@ -156,7 +160,6 @@ export interface ProjectMeta {
   height: number;
   updatedAt: number;
   thumbnail?: string;
-  /** Pinned projects sort to the front of Recents. */
   pinned?: boolean;
   folder?: string;
   tags?: string[];
@@ -170,13 +173,9 @@ export interface BrandColor {
 
 export interface BrandKit {
   name: string;
-  /** Named brand colours — used by inspector swatches and new ink. */
   colors: BrandColor[];
-  /** Preferred display (headline) font family. */
   displayFont: string;
-  /** Preferred body font family. */
   bodyFont: string;
-  /** Extra brand fonts available in the pairing list. */
   fonts: string[];
 }
 
