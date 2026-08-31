@@ -1,3 +1,3 @@
 # The Voice Design — 100-hour improvement loop
 
-Loop 81: typed tracking / leading NumFields. Commit on blur or Enter.
+Loop 84: mixed type size / weight when several text layers are selected.
