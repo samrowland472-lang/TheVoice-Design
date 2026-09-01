@@ -21,47 +21,43 @@ Auth OFF, DB OFF.
 
 ## Backlog (priority order)
 
-1. Inspector rotation / stroke width use NumField drafts.
-2. Mixed-type size / weight sliders beside the draft fields.
+1. Convert text outlines to editable paths.
+2. Real polygon clipper for boolean union/intersect (hull is still an approximation).
 
 ## Done
 
+- Boolean union no longer treats other solids as holes; nested offset rings stay nested (containment is not hulled). Hole windings opposite the outer.
+- Zustand store restored (~29kb) with hydrate, history, `booleanPreview`, `pathEditHit`, and `fit-sel`.
+- Boolean preview keeps offset/outline holes: nested rings are not convex-hulled together; subtract punches the cutter and fills islands from cutter holes; windings oriented for evenodd.
+- Convert selected shape (rect, ellipse, line, polygon, star, arrow) to an editable path. Offset / outline auto-convert first. Inspector Path row + command palette.
+- Offset outlines fillet sharp corners, then Douglas–Peucker simplify. Inspector Offset row: Outline stroke, Round corners, Offset out/in, Simplify.
+- Outline stroke / offset path: selected contour becomes a new layer.
+- Knife: click a path segment to cut.
+- Pen: double-click a corner to auto-smooth; snap two open path ends together to join.
 - Hub, studio chrome, canvas tools, inspector, present, export PNG/JPG/SVG.
-- Mixed type size / weight when two or more text layers are selected.
-- Mixed type family / tracking / leading / align when two or more text layers are selected.
-- NumField supports mixed placeholder (em dash) and blur / Enter / Escape.
-- Store types `booleanPreview` and `fit-sel` view intent; canvas fits the selection box.
-- Inspector type size / weight use NumField drafts on the single-select pane.
-- Inspector tracking / leading drafts sit beside the sliders; typed weight snaps to the nearest 100.
-- Inspector X/Y/W/H use NumField drafts so geometry does not commit mid-keystroke.
-- Mixed-type tracking / leading sliders sit beside the draft fields; drag writes onto every selected text layer.
 
 ## Iterations
 
-### 2026-08-31T05:25Z — loop 89
+### 2026-09-01T10:32Z — loop 110
 
-**Mixed tracking / leading sliders.** Shift-select two text layers: Tracking and Leading now keep the draft field and gain a phosphor slider. Drag sets letter-spacing or line-height on every selected text layer; type a figure and Enter or click away to commit. Differing values still show Mixed and an em dash until you set one. Restored the truncated Zustand store so the studio hydrates again.
+**Boolean hole polish + store restore.** Nested offset rings that sit inside each other no longer collapse into one hull. Union keeps a combined outer and only the holes that still sit inside it; intersect keeps the smaller outer and interior holes. Hole windings flip opposite the outer for evenodd. Restored the truncated Zustand store (~29kb) so hydrate, history, boolean preview, and fit-selection work again.
 
-### 2026-08-31T05:10Z — loop 88
+### 2026-09-01T10:21Z — loop 109
 
-**Geometry drafts.** Select a layer and Inspect X, Y, W, H no longer commit on every keystroke. Type a figure, press Enter or click away; Escape restores the live value. Width and height clamp to 1 so a layer cannot collapse to zero while you type.
+**Boolean preview fidelity on holes after offset.** Nested offset rings no longer collapse into one hull. Subtract keeps cutter islands; union keeps surviving holes. Offset/outline orients hole winding opposite the outer. Restored the truncated Zustand store (~29kb).
 
-### 2026-08-31T04:20Z — loop 87
+### 2026-09-01T09:45Z — loop 108
 
-**Tracking / leading drafts.** Select one text layer: Tracking and Leading keep their sliders and gain a draft field. Type a value, Enter or click away to commit; Escape restores the live figure. Size and weight use the same draft pattern; typed weight snaps to the nearest hundred and the field shows that weight at once. Mixed selection weight drafts snap the same way.
+**Shapes become paths before offset.** Rect (with radius), ellipse, line, polygon, star, and arrow convert in place to cubic/polyline paths. Offset out and Outline stroke run that conversion first. Inspector Path: Convert to path. Command palette: Convert shape to path. Restored the truncated Zustand store (~29kb).
 
-### 2026-08-31T03:15Z — loop 86
+### 2026-09-01T09:25Z — loop 107
 
-**Single-select type drafts.** Select one text layer and Inspect size / weight no longer commit on every keystroke. Type a point size, press Enter or click away; Escape restores the live value. Weight is typed the same way and snaps to the nearest hundred on commit.
+**Rounded, simplified offset outlines.** Offset and outline now fillet corners (radius from stroke width) and simplify the resulting polyline so outlines stay editable.
 
-### 2026-08-31T01:10Z — loop 85
+### 2026-09-01T08:20Z — loop 106
 
-**Mixed type family, tracking, leading, align.** Shift-select two text layers and the Type pane now sets family, tracking, leading and paragraph align across the set. Differing values show Mixed or an em dash; Display / Body still apply the brand pairing to every selected text layer.
-
-### 2026-08-31T00:30Z — loop 84
-
-**Mixed type size and weight.** Shift-select two text layers and the inspector grows a Type pane. Differing sizes show an em dash; type a point size and Enter writes it onto every selected text layer. Weight does the same from the Mixed menu. Single-select copy still lives in Inspect.
+**Outline stroke as a new contour.** Select a path, then Outline stroke / Offset out / Offset in in the inspector (or the command palette).
 
 ## Next recommended
 
-Inspector rotation / stroke width use NumField drafts.
+Convert text outlines to editable paths.
