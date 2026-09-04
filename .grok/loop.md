@@ -21,20 +21,25 @@ Auth OFF, DB OFF.
 
 ## Backlog (priority order)
 
-1. Knife live preview along the whole stroke, not only the pointer tip.
-2. Align / distribute using oriented (rotated) boxes instead of axis-aligned ink boxes.
+1. Type chips label optical size / width when those axes differ across the selection.
+2. Inspector mixed italic / slant axis when a face exposes `ital` or `slnt`.
 
 ## Done
 
-- Align / distribute bake rotated path islands into world-space ink boxes before explode.
-- Knife planarizes figure-eight / bowtie traces into simple lobes before the cut, and the K tool now draws and applies the stroke on the artboard.
+- Type-to-path, PNG raster, and SVG export honor opsz / wdth via the same variation settings as the artboard. SVG writes `font-variation-settings`, weight, tracking, and anchor.
+- Inspector mixed type optical size / width: Fraunces shows Optical (auto from size or locked), Instrument Sans shows Width; multi-select writes only onto faces that support the axis; Auto from size clears the lock.
+- Inspector mixed type write-through: family, weight, tracking, leading, align, and uppercase write onto every selected text layer.
 
 ## Iterations
 
-### 2026-09-02T21:20Z — loop 128
+### 2026-09-04T09:35Z — loop 153
 
-**Rotation-aware island boxes.** Align and distribute flatten a path's rotation into its points, then tighten and explode islands on those world-space boxes.
+**Axes on press.** Optical size and width now ride through outline conversion and export. Convert type to path or download PNG/SVG after locking opsz on Fraunces or wdth on Instrument Sans — the cut and the file keep the axis.
+
+### 2026-09-04T08:30Z — loop 152
+
+**Mixed type axes.** Pick Fraunces for Optical size, Instrument Sans for Width.
 
 ## Next recommended
 
-Knife live preview along the whole stroke, not only the pointer tip.
+Type chips label optical size / width when those axes differ across the selection.
