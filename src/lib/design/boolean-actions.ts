@@ -1,4 +1,5 @@
-import { computeBoolean, type BooleanOp } from "./boolean-ops";
+import { splitCompoundIslands } from "./align";
+import { computeBooleanParts, type BooleanOp } from "./boolean-ops";
 import { smoothPathCorners } from "./path-curve";
 import { useDesign } from "./store";
 import type { DesignNode } from "./types";
@@ -14,21 +15,30 @@ export function applyBoolean(op: BooleanOp) {
   const order = selection
     .map((id) => doc.nodes.find((n) => n.id === id))
     .filter((n): n is DesignNode => Boolean(n));
-  const result = computeBoolean(order, op);
-  if (!result) return;
+  const parts = computeBooleanParts(order, op);
+  if (!parts.length) return;
+  const islands = parts.flatMap((part) => splitCompoundIslands(part));
+  if (!islands.length) return;
   commit();
-  const keepId = order.find((n) => n.id === result.id)?.id ?? order[0]!.id;
-  const drop = new Set(order.filter((n) => n.id !== keepId).map((n) => n.id));
+  const keepId = order[0]!.id;
+  const drop = new Set(order.map((n) => n.id));
+  drop.delete(keepId);
+  const stamped = islands.map((island, i) =>
+    i === 0 ? { ...island, id: keepId, name: island.name } : island,
+  );
+  const extras = stamped.slice(1);
   const live = useDesign.getState().doc;
   if (!live) return;
+  const replaced = live.nodes
+    .map((n) => (n.id === keepId ? stamped[0]! : n))
+    .filter((n) => !drop.has(n.id));
+  const keepIdx = replaced.findIndex((n) => n.id === keepId);
+  const nextNodes = [...replaced];
+  if (keepIdx >= 0) nextNodes.splice(keepIdx + 1, 0, ...extras);
+  else nextNodes.push(...extras);
   useDesign.setState({
-    doc: {
-      ...live,
-      nodes: live.nodes
-        .map((n) => (n.id === keepId ? { ...result, id: keepId } : n))
-        .filter((n) => !drop.has(n.id)),
-    },
-    selection: [keepId],
+    doc: { ...live, nodes: nextNodes },
+    selection: stamped.map((n) => n.id),
     booleanPreview: null,
     dirty: true,
   });
