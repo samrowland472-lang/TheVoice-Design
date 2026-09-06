@@ -6,35 +6,45 @@ function formatNum(n: number) {
 
 export function NumField({
   value,
+  mixed = false,
   onCommit,
+  onFocus,
   min,
   max,
   className = "field font-mono",
+  "aria-label": ariaLabel = "numeric",
 }: {
   value: number;
+  mixed?: boolean;
   onCommit: (n: number) => void;
+  onFocus?: () => void;
   min?: number;
   max?: number;
   className?: string;
+  "aria-label"?: string;
 }) {
   const [focused, setFocused] = useState(false);
-  const [draft, setDraft] = useState(formatNum(value));
+  const [draft, setDraft] = useState(mixed ? "" : formatNum(value));
 
   useEffect(() => {
-    if (!focused) setDraft(formatNum(value));
-  }, [value, focused]);
+    if (!focused) setDraft(mixed ? "" : formatNum(value));
+  }, [value, mixed, focused]);
 
   function commit(raw: string) {
+    if (raw.trim() === "") {
+      setDraft(mixed ? "" : formatNum(value));
+      return;
+    }
     const n = Number(raw);
     if (!Number.isFinite(n)) {
-      setDraft(formatNum(value));
+      setDraft(mixed ? "" : formatNum(value));
       return;
     }
     let next = n;
     if (min !== undefined) next = Math.max(min, next);
     if (max !== undefined) next = Math.min(max, next);
     setDraft(formatNum(next));
-    if (next !== value) onCommit(next);
+    onCommit(next);
   }
 
   return (
@@ -43,10 +53,12 @@ export function NumField({
       type="text"
       inputMode="decimal"
       value={draft}
-      aria-label="numeric"
+      placeholder={mixed && !focused ? "\u2014" : undefined}
+      aria-label={mixed ? `${ariaLabel} mixed` : ariaLabel}
       onFocus={(e) => {
         setFocused(true);
         e.currentTarget.select();
+        onFocus?.();
       }}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={(e) => {
@@ -57,10 +69,10 @@ export function NumField({
         if (e.key === "Enter") {
           e.preventDefault();
           commit(draft);
-          e.currentTarget.blur();
+          // Keep the caret so Tab can walk the next field (path x/y and others).
         }
         if (e.key === "Escape") {
-          setDraft(formatNum(value));
+          setDraft(mixed ? "" : formatNum(value));
           e.currentTarget.blur();
         }
       }}
