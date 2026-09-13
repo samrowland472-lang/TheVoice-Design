@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import {
   pickFirstHoleHeaderTabTarget,
+  pickLastOuterLastPointXTabTarget,
   pickLastHoleDeleteFromFillTabTarget,
   pickLastHoleDeleteFromHeaderTabTarget,
   pickLastHoleFillFromFirstXTabTarget,
@@ -16,11 +17,15 @@ import {
   shouldShiftTabFromNextHoleFirstYToLastHoleFill,
   shouldShiftTabFromNextHoleHeaderToLastHoleDelete,
   shouldShiftTabFromNextHoleHeaderToLastHoleFill,
+  shouldShiftTabFromFirstHoleHeaderToLastOuterX,
+  shouldShiftTabFromFirstHoleHeaderToLastOuterY,
+  pickLastOuterLastPointYTabTarget,
   shouldTabFromHoleDeleteToNextFill,
   shouldTabFromHoleDeleteToNextHeader,
   shouldTabFromHoleFillToNextFirstX,
   shouldTabFromHoleFillToNextFirstY,
   shouldTabFromHoleFillToNextHeader,
+  shouldTabFromLastOuterXToFirstHoleHeader,
   shouldTabFromLastOuterYToFirstHoleHeader,
   tagHoleHeaderTabCrossing,
 } from "@/lib/design/path-point-tab";
@@ -98,6 +103,40 @@ export function PathFields({ node }: { node: PathNode }) {
           }
           return;
         }
+        if (shouldShiftTabFromFirstHoleHeaderToLastOuterY(from, true)) {
+          const lastY = pickLastOuterLastPointYTabTarget(from);
+          if (!lastY) return;
+          e.preventDefault();
+          tagHoleHeaderTabCrossing(from, lastY, lastY);
+          const list = from.closest("[data-path-inspector]")?.querySelector("[data-hole-list]")
+            ?? from.closest("[data-hole-list]");
+          const saved = list instanceof HTMLElement ? list.scrollTop : 0;
+          lastY.focus({ preventScroll: true });
+          if (list instanceof HTMLElement) {
+            list.scrollTop = saved;
+            requestAnimationFrame(() => {
+              list.scrollTop = saved;
+            });
+          }
+          return;
+        }
+        if (shouldShiftTabFromFirstHoleHeaderToLastOuterX(from, true)) {
+          const lastX = pickLastOuterLastPointXTabTarget(from);
+          if (!lastX) return;
+          e.preventDefault();
+          tagHoleHeaderTabCrossing(from, lastX, lastX);
+          const list = from.closest("[data-path-inspector]")?.querySelector("[data-hole-list]")
+            ?? from.closest("[data-hole-list]");
+          const saved = list instanceof HTMLElement ? list.scrollTop : 0;
+          lastX.focus({ preventScroll: true });
+          if (list instanceof HTMLElement) {
+            list.scrollTop = saved;
+            requestAnimationFrame(() => {
+              list.scrollTop = saved;
+            });
+          }
+          return;
+        }
         if (!shouldShiftTabFromNextHoleHeaderToLastHoleFill(from, true)) return;
         const lastFill = pickLastHoleFillFromHeaderTabTarget(from);
         if (!lastFill) return;
@@ -114,7 +153,10 @@ export function PathFields({ node }: { node: PathNode }) {
         }
         return;
       }
-      if (shouldTabFromLastOuterYToFirstHoleHeader(from, false)) {
+      if (
+        shouldTabFromLastOuterYToFirstHoleHeader(from, false) ||
+        shouldTabFromLastOuterXToFirstHoleHeader(from, false)
+      ) {
         const header = pickFirstHoleHeaderTabTarget(from);
         if (!header) return;
         e.preventDefault();
