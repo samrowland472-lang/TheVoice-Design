@@ -21,16 +21,16 @@ Auth OFF, DB OFF.
 
 ## Backlog (priority order)
 
-1. Path inspector: Tab from last hole-path y of hole N onto first hole-path y of hole N+1 while both lists stay mid-scroll after growth.
+1. Path inspector Tab from the last outer path point X onto the first hole header when wrap is off and last Y is present (should still yield to Y).
 
 ## Done
 
-- Path inspector Shift+Tab from first hole-path y of hole N+1 lands on last hole-path y of hole N and holds Points and Holes list scroll after growth.
+- Path inspector Tab from the last outer path point Y onto the first hole header when wrap is off (first hole has no point fields). Document-level Tab in `inspector-path` hops with `shouldTabFromLastOuterYToFirstHoleHeader` / `pickFirstHoleHeaderTabTarget`, `tagHoleHeaderTabCrossing(from, header, header)`, `focus({ preventScroll: true })`, and restores `[data-hole-list]` scroll after growth. Yields to first-hole X/Y hops when those fields exist.
 
 ## Iteration
 
-2026-09-10 07:20 BST — Shift+Tab from first hole-path y of hole N+1 lands on last hole-path y of hole N and holds Points and Holes list scroll after list growth.
+2026-09-13 07:22 BST — Tab from last outer path point Y onto first hole header when wrap is off; hold Holes list scroll.
 
 ## Next recommended
 
-Path inspector: Tab from last hole-path y of hole N onto first hole-path y of hole N+1 while both lists stay mid-scroll after growth.
+Wire Tab from the last outer path point X onto the first hole header at document level when wrap is off and last Y is missing.
