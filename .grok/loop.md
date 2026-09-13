@@ -21,16 +21,18 @@ Auth OFF, DB OFF.
 
 ## Backlog (priority order)
 
-1. Path inspector Tab from the last outer path point X onto the first hole header when wrap is off and last Y is present (should still yield to Y).
+1. Path inspector Shift+Tab from the first hole header onto the last outer path point X when wrap is off and last Y is missing.
 
 ## Done
+
+- Path inspector Tab from the last outer path point X onto the first hole header when wrap is off and last Y is missing. Document-level Tab in `inspector-path` hops with `shouldTabFromLastOuterYToFirstHoleHeader` **or** `shouldTabFromLastOuterXToFirstHoleHeader` / `pickFirstHoleHeaderTabTarget`, `tagHoleHeaderTabCrossing(from, header, header)`, `focus({ preventScroll: true })`, and restores `[data-hole-list]` scroll after growth. Yields to last-outer Y and first-hole X/Y hops when those fields exist (`lastOuterXToFirstHoleHeader` returns false when the last outer row still has a Y input).
 
 - Path inspector Tab from the last outer path point Y onto the first hole header when wrap is off (first hole has no point fields). Document-level Tab in `inspector-path` hops with `shouldTabFromLastOuterYToFirstHoleHeader` / `pickFirstHoleHeaderTabTarget`, `tagHoleHeaderTabCrossing(from, header, header)`, `focus({ preventScroll: true })`, and restores `[data-hole-list]` scroll after growth. Yields to first-hole X/Y hops when those fields exist.
 
 ## Iteration
 
-2026-09-13 07:22 BST — Tab from last outer path point Y onto first hole header when wrap is off; hold Holes list scroll.
+2026-09-13 08:15 BST — Tab from last outer path point X onto first hole header when wrap is off and last Y is missing; still yields to Y.
 
 ## Next recommended
 
-Wire Tab from the last outer path point X onto the first hole header at document level when wrap is off and last Y is missing.
+Wire Shift+Tab from the first hole header onto the last outer path point X at document level when wrap is off and last Y is missing.
