@@ -21,20 +21,22 @@ Auth OFF, DB OFF.
 
 ## Backlog (priority order)
 
-1. Path inspector wrap-off: reuse `holdHoleListAcrossOuterHop` clamp-after-growth for hole-fill / hole-delete hops that still assign `scrollTop` without clamp.
+1. Inspector: multi-select mixed values shown as a dash, with “Apply to all” on edit.
 
 ## Done
 
-- Wrap-off first-hole header ↔ last outer hops clamp hole-list scroll after list growth: snapshot `[data-hole-list]` from `[data-path-inspector]`, `focus({ preventScroll: true })`, assign `list.scrollTop = saved`, then `restoreListScroll` plus a third rAF `restoreHoleListScroll` (`clampAfterGrowth`) so a taller hole list cannot keep an out-of-range offset.
+- Layer filter field above the stack. Matches name or kind (case-insensitive). Count + clear. Drag-reorder disabled while filtered so drop indices stay honest.
 
-- Path inspector wrap-off hops first-hole header ↔ last outer X/Y hold hole-list scroll through `holdHoleListAcrossOuterHop`.
+- History list labels: undo stack records action names (Delete, Move, Type, Add Rectangle, …) and the Layers History list shows them instead of “Step N / Redo N”. Clicking a named step restores that snapshot and rewinds/fast-forwards the stack.
 
-- Path inspector Shift+Tab from the first hole header onto the last outer path point Y at document level when wrap is off.
+- Double-click a layer name in the Layers panel to rename it. Enter commits, Escape cancels, blur commits a trimmed name. Empty names are ignored.
+
+- Path inspector wrap-off helpers folded onto shared `path-point-tab-b` (`snapshotList`, `holdListScroll`, `focusHoldEl`, `focusHold`, `holdExitHop`).
 
 ## Iteration
 
-2026-09-13 12:08 BST — Wrap-off first-hole header ↔ last outer hops clamp hole-list scroll after growth (triple rAF + restoreHoleListScroll).
+2026-09-14 15:36 BST — Layer search / filter in the Layers panel.
 
 ## Next recommended
 
-Reuse `holdHoleListAcrossOuterHop` clamp-after-growth for hole-fill / hole-delete hops that still assign `scrollTop` without clamp.
+Inspector mixed-value treatment for multi-select.
