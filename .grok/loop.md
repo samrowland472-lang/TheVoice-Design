@@ -21,22 +21,22 @@ Auth OFF, DB OFF.
 
 ## Backlog (priority order)
 
-1. Inspector: multi-select mixed values shown as a dash, with “Apply to all” on edit.
+1. Per-kind width hover ghost on the canvas (same pattern as rhythm preview).
 
 ## Done
 
-- Layer filter field above the stack. Matches name or kind (case-insensitive). Count + clear. Drag-reorder disabled while filtered so drop indices stay honest.
+- Mixed-kind dash / cap / join on SVG export: stroked nodes emit `stroke-dasharray`, `stroke-dashoffset`, `stroke-linecap`, `stroke-linejoin`, and `stroke-miterlimit`. Canvas / PNG use the same dash, cap, join, and miter instead of a hardcoded round stroke.
 
-- History list labels: undo stack records action names (Delete, Move, Type, Add Rectangle, …) and the Layers History list shows them instead of “Step N / Redo N”. Clicking a named step restores that snapshot and rewinds/fast-forwards the stack.
+- Mixed-kind dash preview on the canvas: hovering (or focusing) a rhythm chip paints a phosphor ghost stroke on every selected outline using that chip’s dash, cap, and join. Canvas and PNG render now honour strokeDash, dash offset, cap, join, and miter.
 
-- Double-click a layer name in the Layers panel to rename it. Enter commits, Escape cancels, blur commits a trimmed name. Empty names are ignored.
+- Per-kind width chips: when a mixed outline pick disagrees on stroke width, each selected path/rect/ellipse/line/polygon/star/arrow shows a width chip; clicking stamps that outline’s strokeWidth onto every outline in the pick. Hairline (0) labels as hair.
 
-- Path inspector wrap-off helpers folded onto shared `path-point-tab-b` (`snapshotList`, `holdListScroll`, `focusHoldEl`, `focusHold`, `holdExitHop`).
+- Per-kind dash / cap / join preview chips: when a mixed outline pick disagrees on dash, cap, or join, each selected path/rect/ellipse/line/polygon/star/arrow shows chips plus a combined rhythm chip. Clicking stamps that outline’s dash, cap, or join onto every outline in the pick. Offset and miter chips still stamp those fields. Sides write onto polygons/stars only; head scale onto arrows only. Arrows paint and export as heads (`headScale`).
 
 ## Iteration
 
-2026-09-14 15:36 BST — Layer search / filter in the Layers panel.
+2026-09-16 12:20 BST — SVG export writes dash / cap / join / miter; canvas stroke style matches.
 
 ## Next recommended
 
-Inspector mixed-value treatment for multi-select.
+Per-kind width hover ghost on the canvas.
