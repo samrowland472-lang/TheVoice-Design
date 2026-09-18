@@ -21,22 +21,24 @@ Auth OFF, DB OFF.
 
 ## Backlog (priority order)
 
-1. Per-kind width hover ghost on the canvas (same pattern as rhythm preview).
+1. Guide lock / hide per guide.
+2. Distribute selected guides evenly.
+3. Guide color / style per axis.
 
 ## Done
 
-- Mixed-kind dash / cap / join on SVG export: stroked nodes emit `stroke-dasharray`, `stroke-dashoffset`, `stroke-linecap`, `stroke-linejoin`, and `stroke-miterlimit`. Canvas / PNG use the same dash, cap, join, and miter instead of a hardcoded round stroke.
-
-- Mixed-kind dash preview on the canvas: hovering (or focusing) a rhythm chip paints a phosphor ghost stroke on every selected outline using that chip’s dash, cap, and join. Canvas and PNG render now honour strokeDash, dash offset, cap, join, and miter.
-
-- Per-kind width chips: when a mixed outline pick disagrees on stroke width, each selected path/rect/ellipse/line/polygon/star/arrow shows a width chip; clicking stamps that outline’s strokeWidth onto every outline in the pick. Hairline (0) labels as hair.
-
-- Per-kind dash / cap / join preview chips: when a mixed outline pick disagrees on dash, cap, or join, each selected path/rect/ellipse/line/polygon/star/arrow shows chips plus a combined rhythm chip. Clicking stamps that outline’s dash, cap, or join onto every outline in the pick. Offset and miter chips still stamp those fields. Sides write onto polygons/stars only; head scale onto arrows only. Arrows paint and export as heads (`headScale`).
+- Multi-guide select + nudge: click a guide on the board or in Print (Shift to add), phosphor highlight, arrow keys nudge (Shift 10 / Alt 0.5), Delete removes the selection. Adding a guide selects it. Object select clears guide select.
+- Guide pair spacing: consecutive parallel guides draw equal-gap ticks and a numeric gap on the artboard; Print inspector lists V/H pair gaps. Live drag highlights the pair that includes the moving guide.
+- Guide distance readout while dragging: nearest object / artboard / sibling-guide gap on each side, drawn on the artboard and in the Print inspector.
+- Guide snap-to-object: dragging a guide from the inspector V/H handle or on the artboard snaps to object edges/centers and artboard midlines when Snap is on (hold Alt to bypass). Numeric commit in the guide list also snaps.
+- Present-mode Safe / Marks chrome: present bar chips plus S / M shortcuts toggle live safe-area inset and crop / bleed marks. Canvas draws those overlays in editor and present. Prefs persist. Command palette Show / hide.
+- Inspector Print + Guides: None/3 mm/6 mm chips highlight uniform bleed; T/R/B/L fields write `bleedEdges`; Print marks checkbox + command palette Show/Hide. Live crop marks and bleed band on the artboard; safe-area inset when Safe area is on. Guide list Add V/H, numeric pos, Del, Clear. Prefs persist. `setBleed` writes matching `bleedEdges`.
+- Print-mark toggle in inspector + top bar (Crop) draws live crop / registration marks on the artboard.
 
 ## Iteration
 
-2026-09-16 12:20 BST — SVG export writes dash / cap / join / miter; canvas stroke style matches.
+2026-09-18 11:10 BST — Multi-guide select + arrow-key nudge.
 
 ## Next recommended
 
-Per-kind width hover ghost on the canvas.
+Guide lock / hide per guide.
