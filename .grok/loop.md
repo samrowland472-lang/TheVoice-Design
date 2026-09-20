@@ -21,24 +21,31 @@ Auth OFF, DB OFF.
 
 ## Backlog (priority order)
 
-1. Guide lock / hide per guide.
-2. Distribute selected guides evenly.
-3. Guide color / style per axis.
+1. Present-mode keyboard focus ring on the active page dot (done on focus-visible; tighten active-dot ring).
+2. Present-mode speaker-notes keyboard (N to toggle notes drawer).
 
 ## Done
 
-- Multi-guide select + nudge: click a guide on the board or in Print (Shift to add), phosphor highlight, arrow keys nudge (Shift 10 / Alt 0.5), Delete removes the selection. Adding a guide selects it. Object select clears guide select.
-- Guide pair spacing: consecutive parallel guides draw equal-gap ticks and a numeric gap on the artboard; Print inspector lists V/H pair gaps. Live drag highlights the pair that includes the moving guide.
-- Guide distance readout while dragging: nearest object / artboard / sibling-guide gap on each side, drawn on the artboard and in the Print inspector.
-- Guide snap-to-object: dragging a guide from the inspector V/H handle or on the artboard snaps to object edges/centers and artboard midlines when Snap is on (hold Alt to bypass). Numeric commit in the guide list also snaps.
-- Present-mode Safe / Marks chrome: present bar chips plus S / M shortcuts toggle live safe-area inset and crop / bleed marks. Canvas draws those overlays in editor and present. Prefs persist. Command palette Show / hide.
-- Inspector Print + Guides: None/3 mm/6 mm chips highlight uniform bleed; T/R/B/L fields write `bleedEdges`; Print marks checkbox + command palette Show/Hide. Live crop marks and bleed band on the artboard; safe-area inset when Safe area is on. Guide list Add V/H, numeric pos, Del, Clear. Prefs persist. `setBleed` writes matching `bleedEdges`.
-- Print-mark toggle in inspector + top bar (Crop) draws live crop / registration marks on the artboard.
+- Restored the Zustand store (`store-impl.ts`) so campaign, persist, and studio actions resolve.
+- Campaign chip context menu: rename, duplicate, unlink, delete page.
+- Confirm-before-delete when the last page of a campaign is removed (strip menu + hub trash).
+- `writeCampaignOrder` keeps remaining strip positions after unlink/delete.
+- `duplicateCampaignPage` clones the open board into the same set.
+- Speaker notes persist immediately on edit (`setNotes` writes the artboard).
+- Chip menu: duplicate, unlink, delete page.
+- Double-click a chip to rename the page.
+- Drag-reorder campaign chips; drop writes `campaignOrder` via `reorderCampaignPages` / `writeCampaignOrder`.
+- Present-mode page dots: right-click menu with rename, duplicate, unlink, delete last page (confirm).
+- Campaign strip keyboard reorder: Alt+Left / Alt+Right on a chip (or while the open page is in a set) calls `nudgeCampaignPage` and writes `campaignOrder`.
+- Present-mode page dots drag-reorder via `PresentChipRail` (`reorderCampaignPages` / `campaignOrder`).
+- Present chrome uses `PresentChipRail` instead of inert dots.
+- Typecheck: AI text nodes include stroke style fields; render default branch is typed.
+- Present-mode page dots: Tab-focusable; Alt+Left / Alt+Right on a focused dot calls `nudgeCampaignPage` (same as the campaign strip). Focus-visible phosphor ring.
 
 ## Iteration
 
-2026-09-18 11:10 BST — Multi-guide select + arrow-key nudge.
+2026-09-20 21:08 BST — Present-mode Alt+Left / Alt+Right page-dot reorder.
 
 ## Next recommended
 
-Guide lock / hide per guide.
+Present-mode speaker-notes keyboard (N to toggle notes drawer).
