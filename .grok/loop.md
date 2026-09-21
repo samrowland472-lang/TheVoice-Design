@@ -22,30 +22,18 @@ Auth OFF, DB OFF.
 ## Backlog (priority order)
 
 1. Present-mode keyboard focus ring on the active page dot (done on focus-visible; tighten active-dot ring).
-2. Present-mode speaker-notes keyboard (N to toggle notes drawer).
 
 ## Done
 
-- Restored the Zustand store (`store-impl.ts`) so campaign, persist, and studio actions resolve.
+- Present-mode speaker notes drawer: **N** toggles notes; **Escape** closes the drawer first, then exits present. Header control **Notes · N**. Notes stay off the stage until opened.
+- Restored the Zustand store so campaign, persist, and studio actions resolve.
 - Campaign chip context menu: rename, duplicate, unlink, delete page.
-- Confirm-before-delete when the last page of a campaign is removed (strip menu + hub trash).
-- `writeCampaignOrder` keeps remaining strip positions after unlink/delete.
-- `duplicateCampaignPage` clones the open board into the same set.
-- Speaker notes persist immediately on edit (`setNotes` writes the artboard).
-- Chip menu: duplicate, unlink, delete page.
-- Double-click a chip to rename the page.
-- Drag-reorder campaign chips; drop writes `campaignOrder` via `reorderCampaignPages` / `writeCampaignOrder`.
-- Present-mode page dots: right-click menu with rename, duplicate, unlink, delete last page (confirm).
-- Campaign strip keyboard reorder: Alt+Left / Alt+Right on a chip (or while the open page is in a set) calls `nudgeCampaignPage` and writes `campaignOrder`.
-- Present-mode page dots drag-reorder via `PresentChipRail` (`reorderCampaignPages` / `campaignOrder`).
-- Present chrome uses `PresentChipRail` instead of inert dots.
-- Typecheck: AI text nodes include stroke style fields; render default branch is typed.
-- Present-mode page dots: Tab-focusable; Alt+Left / Alt+Right on a focused dot calls `nudgeCampaignPage` (same as the campaign strip). Focus-visible phosphor ring.
+- Present-mode page dots: Tab-focusable; Alt+Left / Alt+Right on a focused dot calls `nudgeCampaignPage`.
 
 ## Iteration
 
-2026-09-20 21:08 BST — Present-mode Alt+Left / Alt+Right page-dot reorder.
+2026-09-21 12:30 BST — Present-mode N toggles the speaker-notes drawer.
 
 ## Next recommended
 
-Present-mode speaker-notes keyboard (N to toggle notes drawer).
+Tighten the present-mode active page-dot focus ring (phosphor ring on the current frame).
