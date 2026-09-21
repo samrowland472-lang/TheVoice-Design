@@ -45,7 +45,6 @@ export function useShortcuts() {
           return;
         }
         if (s.present) {
-          s.setPresent(false);
           return;
         }
         if (s.tool === "pen") {
