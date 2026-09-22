@@ -11,7 +11,6 @@ export function shouldHidePresentChrome(opts: {
   return opts.idle;
 }
 
-/** Thin hairline + page-dot peek stay when the rail is hidden so the deck is findable. */
 export function shouldShowPresentPeek(opts: {
   hideChrome: boolean;
   pageCount: number;
@@ -19,7 +18,6 @@ export function shouldShowPresentPeek(opts: {
   return opts.hideChrome && opts.pageCount > 0;
 }
 
-/** Frame-advance keys keep peek visible — they must not wake the campaign rail. */
 export function isQuietPresentNavKey(key: string): boolean {
   return (
     key === "ArrowRight" ||
@@ -33,12 +31,10 @@ export function isQuietPresentNavKey(key: string): boolean {
   );
 }
 
-/** Peek strip pointer work stays quiet so scrubbing does not wake the rail. */
 export function isQuietPresentPeekTarget(target: EventTarget | null): boolean {
   return target instanceof Element && Boolean(target.closest("[data-present-peek]"));
 }
 
-/** Map a pointer X inside the peek strip to a frame index. */
 export function peekScrubIndex(clientX: number, stripLeft: number, stripWidth: number, pageCount: number): number {
   if (pageCount <= 0) return 0;
   if (stripWidth <= 0) return 0;
@@ -47,13 +43,11 @@ export function peekScrubIndex(clientX: number, stripLeft: number, stripWidth: n
   return Math.max(0, Math.min(pageCount - 1, i));
 }
 
-/** After a drag-scrub, keep a tick on the last frame only if the pointer actually moved. */
 export function peekScrubTickId(startId: string | null, endId: string | null): string | null {
   if (!endId || !startId || startId === endId) return null;
   return endId;
 }
 
-/** Last-frame tick fades if you stay on the landed frame. */
 export const PEEK_TICK_FADE_MS = 3200;
 
 export function peekTickAfterDwell(
@@ -66,14 +60,20 @@ export function peekTickAfterDwell(
   return tickId;
 }
 
-/** Quiet frame-advance keys drop the last-frame tick so it is not a second current-dot. */
+export function peekTickFadeShouldRestart(
+  prevTickId: string | null,
+  nextTickId: string | null,
+): boolean {
+  if (!nextTickId) return false;
+  return prevTickId !== nextTickId;
+}
+
 export function peekTickAfterQuietAdvance(tickId: string | null, key: string): string | null {
   if (!tickId) return null;
   if (isQuietPresentNavKey(key) && key !== "Shift") return null;
   return tickId;
 }
 
-/** Quiet click of a different peek dot also drops the last-frame tick. */
 export function peekTickAfterQuietDotClick(
   tickId: string | null,
   clickedId: string | null,
@@ -81,5 +81,11 @@ export function peekTickAfterQuietDotClick(
 ): string | null {
   if (!tickId) return null;
   if (clickedId && currentId && clickedId !== currentId) return null;
+  return tickId;
+}
+
+export function peekTickShown(tickId: string | null, currentId: string | null): string | null {
+  if (!tickId) return null;
+  if (currentId && tickId === currentId) return null;
   return tickId;
 }
