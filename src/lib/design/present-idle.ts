@@ -46,3 +46,16 @@ export function peekScrubIndex(clientX: number, stripLeft: number, stripWidth: n
   const i = Math.floor(t * pageCount);
   return Math.max(0, Math.min(pageCount - 1, i));
 }
+
+/** After a drag-scrub, keep a tick on the last frame only if the pointer actually moved. */
+export function peekScrubTickId(startId: string | null, endId: string | null): string | null {
+  if (!endId || !startId || startId === endId) return null;
+  return endId;
+}
+
+/** Quiet frame-advance keys drop the last-frame tick so it is not a second current-dot. */
+export function peekTickAfterQuietAdvance(tickId: string | null, key: string): string | null {
+  if (!tickId) return null;
+  if (isQuietPresentNavKey(key) && key !== "Shift") return null;
+  return tickId;
+}

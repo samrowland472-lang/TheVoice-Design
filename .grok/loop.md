@@ -2,4 +2,8 @@
 
 ## Iteration
 
-2026-09-22 04:10 BST — Peek Shift+hover names that frame; drag-scrub stays quiet.
+2026-09-22 10:17 BST — Peek last-frame tick fades on the next quiet arrow-key advance.
+
+## Next recommended
+
+Peek tick should also clear on a quiet click of a different peek dot (not only keys).
