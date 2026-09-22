@@ -43,9 +43,15 @@ export function peekScrubIndex(clientX: number, stripLeft: number, stripWidth: n
   return Math.max(0, Math.min(pageCount - 1, i));
 }
 
-export function peekScrubTickId(startId: string | null, endId: string | null): string | null {
-  if (!endId || !startId || startId === endId) return null;
-  return endId;
+export function peekScrubTickId(
+  startId: string | null,
+  endId: string | null,
+  lastOtherId: string | null = null,
+): string | null {
+  if (!endId || !startId) return null;
+  if (startId !== endId) return endId;
+  if (lastOtherId && lastOtherId !== endId) return lastOtherId;
+  return null;
 }
 
 export const PEEK_TICK_FADE_MS = 3200;
@@ -88,4 +94,13 @@ export function peekTickShown(tickId: string | null, currentId: string | null): 
   if (!tickId) return null;
   if (currentId && tickId === currentId) return null;
   return tickId;
+}
+
+export function peekTickOpacity(distance: number): number {
+  if (!Number.isFinite(distance) || distance <= 0) return 0;
+  const d = Math.abs(Math.round(distance));
+  if (d === 1) return 0.7;
+  if (d === 2) return 0.42;
+  if (d === 3) return 0.26;
+  return 0.14;
 }
