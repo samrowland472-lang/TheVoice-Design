@@ -142,9 +142,56 @@ export function peekCaptionAfterQuietHomeEnd(opts: {
   namedId: string | null;
   key: string;
   shiftHeld: boolean;
-}): { namedId: string | null; showCaption: boolean } {
+}): { namedId: string | null; showCaption: boolean; muted: boolean } {
   if (opts.key !== "Home" && opts.key !== "End") {
-    return { namedId: opts.namedId, showCaption: opts.shiftHeld };
+    return { namedId: opts.namedId, showCaption: opts.shiftHeld, muted: false };
   }
-  return { namedId: null, showCaption: false };
+  return { namedId: null, showCaption: false, muted: true };
+}
+
+export function peekCaptionAfterShiftHover(opts: {
+  muted: boolean;
+  namedId: string | null;
+}): { muted: boolean; namedId: string | null } {
+  if (!opts.namedId) return { muted: opts.muted, namedId: null };
+  return { muted: false, namedId: opts.namedId };
+}
+
+export function peekCaptionNameId(opts: {
+  muted: boolean;
+  namedId: string | null;
+  fallbackId: string | null;
+}): string | null {
+  if (opts.namedId) return opts.namedId;
+  if (opts.muted) return null;
+  return opts.fallbackId;
+}
+
+export function peekCaptionAfterCurrentDotHover(opts: {
+  muted: boolean;
+  hoveringCurrent: boolean;
+  namedId: string | null;
+  scrubbing?: boolean;
+}): { muted: boolean; namedId: string | null } {
+  if (opts.scrubbing) return { muted: opts.muted, namedId: opts.namedId };
+  if (!opts.hoveringCurrent) return { muted: opts.muted, namedId: opts.namedId };
+  return { muted: opts.muted, namedId: null };
+}
+
+export function peekCaptionAfterLeaveCurrentDot(opts: {
+  muted: boolean;
+  namedId: string | null;
+}): { muted: boolean; namedId: string | null } {
+  if (opts.namedId) return { muted: false, namedId: opts.namedId };
+  return { muted: false, namedId: null };
+}
+
+export function peekCaptionAfterMutedScrub(opts: {
+  muted: boolean;
+  scrubbing: boolean;
+  underPointerId: string | null;
+}): { muted: boolean; namedId: string | null } {
+  if (!opts.scrubbing) return { muted: opts.muted, namedId: null };
+  if (!opts.underPointerId) return { muted: true, namedId: null };
+  return { muted: false, namedId: opts.underPointerId };
 }
