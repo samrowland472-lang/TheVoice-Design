@@ -2,14 +2,12 @@
 
 ## Iteration
 
-2026-09-23 18:58 BST — Escape after a muted Home/End keep stays in present and does not restore the next-frame fallback name while Shift is still held.
+2026-09-24 09:04 BST — Quiet Escape after window-blur keep-clear keeps mutedPointerUpKeep dead so later current-dot hover names the live frame.
 
 ## Next recommended
 
-Shift-release after a quiet Escape keep should stay muted so the fallback name does not flash on the peek strip.
+Quiet Escape after keep-clear while Shift is held should stay in present and still name the current frame on later current-dot hover.
 
 ## Done
 
-- peekCaptionAfterQuietEscape clears namedId, keeps mute, and stays in present when Shift is held.
-- Present chrome applies that helper on Escape before exit; muted Home/End still go through peekCaptionAfterQuietHomeEnd / peekTickAfterQuietHomeEnd.
-- applyLostCapture + peekAfterLostCapture share pointer-cancel and window-blur mid-scrub.
+- Quiet Escape after window-blur keep-clear uses peekCaptionAfterQuietEscapeAfterKeepClear; current-dot hover names the live frame without reviving mutedPointerUpKeep.
