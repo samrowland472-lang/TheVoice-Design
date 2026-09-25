@@ -45,7 +45,6 @@ export function peekCaptionAfterLeaveOffCurrentNamedTick(opts: {
   };
 }
 
-/** Window blur mid-scrub after keep-clear shares this helper so the current-dot name stays live. */
 export function applyWindowBlur(opts: { scrubbing: boolean }) {
   return { endScrub: opts.scrubbing, nameCurrentDot: true };
 }
@@ -73,7 +72,6 @@ export function peekCaptionAfterLostCaptureCurrentHover(opts: {
   });
 }
 
-/** Quiet Escape after window-blur keep-clear must not revive mutedPointerUpKeep. */
 export function peekCaptionAfterQuietEscapeAfterKeepClear(opts: {
   key: string;
   shiftHeld: boolean;
@@ -99,7 +97,6 @@ export function peekCaptionAfterQuietEscapeAfterKeepClear(opts: {
   };
 }
 
-/** Quiet Escape after keep-clear while Shift is held stays in present; keep stays dead. */
 export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeld(opts: {
   key: string;
   muted: boolean;
@@ -126,7 +123,6 @@ export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeld(opts: {
   };
 }
 
-/** Later current-dot hover after that quiet Escape names the live frame; keep stays dead. */
 export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldCurrentHover(opts: {
   key: string;
   muted: boolean;
@@ -161,19 +157,24 @@ export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldCurrentHover(o
   };
 }
 
-/** Shift-release after that quiet Escape stays muted until an off-current tick is named. */
-export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftRelease(opts: {
+type KeepClearReleaseOpts = {
   muted: boolean;
   namedId: string | null;
   fallbackId: string | null;
   offCurrentNamedId?: string | null;
-}): {
+};
+
+type KeepClearReleaseResult = {
   muted: boolean;
   namedId: string | null;
   showCaption: boolean;
   captionId: string | null;
   mutedPointerUpKeep: boolean;
-} {
+};
+
+export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftRelease(
+  opts: KeepClearReleaseOpts,
+): KeepClearReleaseResult {
   const off = opts.offCurrentNamedId ?? null;
   if (off) {
     return {
@@ -195,4 +196,52 @@ export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftRelease(o
     }),
     mutedPointerUpKeep: false,
   };
+}
+
+export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleaseWindowBlur(
+  opts: KeepClearReleaseOpts,
+): KeepClearReleaseResult {
+  return peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftRelease(opts);
+}
+
+export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleasePointerCancel(
+  opts: KeepClearReleaseOpts,
+): KeepClearReleaseResult {
+  return peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleaseWindowBlur(opts);
+}
+
+export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleaseLostPointerCapture(
+  opts: KeepClearReleaseOpts,
+): KeepClearReleaseResult {
+  return peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleasePointerCancel(opts);
+}
+
+export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleasePointerUp(
+  opts: KeepClearReleaseOpts,
+): KeepClearReleaseResult {
+  return peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleaseLostPointerCapture(opts);
+}
+
+export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleasePointerLeave(
+  opts: KeepClearReleaseOpts,
+): KeepClearReleaseResult {
+  return peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleasePointerUp(opts);
+}
+
+export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleasePointerOut(
+  opts: KeepClearReleaseOpts,
+): KeepClearReleaseResult {
+  return peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleasePointerLeave(opts);
+}
+
+export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleasePointerEnter(
+  opts: KeepClearReleaseOpts,
+): KeepClearReleaseResult {
+  return peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleasePointerOut(opts);
+}
+
+export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleasePointerOver(
+  opts: KeepClearReleaseOpts,
+): KeepClearReleaseResult {
+  return peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleasePointerEnter(opts);
 }
