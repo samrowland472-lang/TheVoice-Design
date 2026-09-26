@@ -2,26 +2,12 @@
 
 ## Iteration
 
-2026-09-25 02:05 BST — Present chrome treats a document-level pointer-move after the muted keep-clear Shift-held path through the pointer-over mute helper so a move cannot flash the next-frame name.
+2026-09-26 21:10 BST — SVG export wraps every layer (outline paths, text, rects) in rotate(deg cx cy) around nodeCenter so rotation matches the canvas.
 
 ## Next recommended
 
-Present chrome should treat a document-level pointer-down after that same muted keep-clear Shift-held path through the pointer-move mute helper so a down cannot flash the next-frame name.
+SVG clip to text box. Letter-spacing on wrap measure vs canvas. Compound path islands as groups.
 
 ## Done
 
-- peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleasePointerMove delegates to the pointer-over helper.
-- Present chrome routes document pointermove through applyQuietKeepClearPointerMove after the pointer-over mute path.
-- peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleasePointerOver delegates to the pointer-enter helper.
-- Present chrome routes document pointerover through applyQuietKeepClearPointerOver after the pointer-enter mute path.
-- peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleasePointerEnter delegates to the pointer-out helper.
-- Present chrome routes document pointerenter through applyQuietKeepClearPointerEnter after the pointer-out mute path.
-- peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleasePointerOut delegates to the pointer-leave helper.
-- Present chrome routes document pointerout through applyQuietKeepClearPointerOut after the pointer-leave mute path.
-- peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleasePointerLeave delegates to the pointer-up helper.
-- Present chrome routes pointerleave through applyQuietKeepClearPointerLeave after the pointer-up mute path.
-- peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleasePointerUp delegates to the lost-capture helper.
-- Present chrome routes pointerup through applyQuietKeepClearPointerUp after the lost-capture mute path.
-- lostpointercapture is wired through applyQuietKeepClearLostPointerCapture after the pointer-cancel mute path.
-- pointercancel is also wired through applyQuietKeepClearPointerCancel so a cancelled scrub stays muted.
-- Naming an off-current tick on the pointer-over path still lifts mute and shows that frame.
+- SVG export svgRotateWrap applies canvas-matching rotation to outlines, paths, text, and rects.
