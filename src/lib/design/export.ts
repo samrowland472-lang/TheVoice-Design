@@ -1,12 +1,12 @@
 import { partitionPathHoles, pathFillRule } from "./fill-rule";
-import { variationSettings } from "./fonts";
-import { pathD } from "./path-curve";
+import { canvasFont, clampAxis, variationSettings } from "./fonts";
+import { bakeRotatedPoints, pathD } from "./path-curve";
 import { isConvertibleShape, shapeContour } from "./shape-to-path";
 import { drawPrintMarks, resolveBleed } from "./print-marks";
 import { drawDocument } from "./render";
 import { canvasShadowParams } from "./shadow";
-import { layoutTextLines } from "./text-layout";
-import type { DesignDocument, DesignNode, PathNode, Shadow, ShapeNode, TextNode } from "./types";
+import { layoutTextLines, measureTracked } from "./text-layout";
+import type { DesignDocument, DesignNode, PathNode, PathPoint, Shadow, ShapeNode, TextNode } from "./types";
 
 export { canvasShadowParams } from "./shadow";
 
@@ -55,6 +55,19 @@ function rotateWrap(n: DesignNode, inner: string): string {
   const t = svgRotateTransform(n);
   if (!t) return inner;
   return `<g transform="${t}">${inner}</g>`;
+}
+
+/** World-space path d with rotation baked into anchors and cubic handles. */
+export function bakedPathD(
+  n: Pick<DesignNode, "x" | "y" | "w" | "h" | "rotation">,
+  pts: PathPoint[],
+  closed: boolean,
+): string {
+  const rot = n.rotation ?? 0;
+  const cx = n.x + n.w / 2;
+  const cy = n.y + n.h / 2;
+  const baked = bakeRotatedPoints(n.x, n.y, pts, rot, cx, cy);
+  return pathD(0, 0, baked, closed);
 }
 
 export function svgStrokeStyle(
@@ -121,19 +134,46 @@ export function downloadDataUrl(dataUrl: string, filename: string) {
 }
 
 export function slug(name: string) {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "") || "artboard";
+  return (
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "artboard"
+  );
 }
 
 export function downloadPrintPdf(doc: DesignDocument) {
   downloadDataUrl(exportPrintPng(doc), `${slug(doc.name)}-print.png`);
 }
 
-function estimateWidth(text: string, fontSize: number, letterSpacing: number) {
+function estimateGlyphWidth(text: string, fontSize: number, opticalScale = 1) {
   if (!text) return 0;
-  return text.length * fontSize * 0.52 + Math.max(0, text.length - 1) * letterSpacing;
+  return text.length * fontSize * 0.52 * opticalScale;
+}
+
+/**
+ * Caption optical size (low opsz) runs wider per em than display optical size.
+ * Canvas wrap uses measureText after applyFontFace — SVG wrap must follow the
+ * same direction so line breaks do not drift when opsz moves off fontSize.
+ */
+export function opticalWrapScale(
+  t: Pick<TextNode, "fontFamily" | "fontSize" | "opticalSize">,
+): number {
+  const axis = canvasFont(t.fontFamily)?.opsz;
+  if (!axis) return 1;
+  const opsz = clampAxis(axis, t.opticalSize, t.fontSize);
+  const span = Math.max(1, axis.max - axis.min);
+  const tnorm = (opsz - axis.min) / span;
+  return 1.08 - 0.12 * tnorm;
+}
+
+function estimateWidth(
+  text: string,
+  fontSize: number,
+  letterSpacing: number,
+  opticalScale = 1,
+) {
+  return measureTracked(text, (s) => estimateGlyphWidth(s, fontSize, opticalScale), letterSpacing);
 }
 
 function svgTextClipId(id: string) {
@@ -147,7 +187,8 @@ export function svgTextBoxClip(t: Pick<TextNode, "id" | "x" | "y" | "w" | "h">):
 }
 
 export function svgTextMarkup(t: TextNode, fill: string): string {
-  const measure = (s: string) => estimateWidth(s, t.fontSize, t.letterSpacing ?? 0);
+  const opszScale = opticalWrapScale(t);
+  const measure = (s: string) => estimateWidth(s, t.fontSize, t.letterSpacing ?? 0, opszScale);
   const { lines, lineHeight, startY } = layoutTextLines(t, measure);
   const anchor = t.align === "center" ? "middle" : t.align === "right" ? "end" : "start";
   let ax = t.x;
@@ -188,24 +229,24 @@ export function exportSvg(doc: DesignDocument): string {
       if (n.kind === "path") {
         const p = n as PathNode;
         const { cut, islands } = partitionPathHoles(p);
-        const parts = [pathD(p.x, p.y, p.points, p.closed), ...cut.map((ring) => pathD(p.x, p.y, ring, true))];
+        const parts = [bakedPathD(p, p.points, p.closed), ...cut.map((ring) => bakedPathD(p, ring, true))];
         const rule = pathFillRule(p);
         const ruleAttr = cut.length || rule === "evenodd" ? ` fill-rule="${rule}"` : "";
         const holeIslands = islands
           .map(
             (ring) =>
-              `<path d="${esc(pathD(p.x, p.y, ring, true))}" fill="${esc(fill)}" stroke="${esc(n.stroke)}" stroke-width="${n.strokeWidth}"${extra}${blendAttr(n)}/>`,
+              `<path d="${esc(bakedPathD(p, ring, true))}" fill="${esc(fill)}" stroke="${esc(n.stroke)}" stroke-width="${n.strokeWidth}"${extra}${blendAttr(n)}/>`,
           )
           .join("");
         const islandGroup = holeIslands ? `<g data-islands="1">${holeIslands}</g>` : "";
         const markup = `<path d="${esc(parts.join(" "))}" fill="${esc(fill)}" stroke="${esc(n.stroke)}" stroke-width="${n.strokeWidth}"${extra}${ruleAttr}${shadowAttr(n)}${blendAttr(n)}/>${islandGroup}`;
-        return `${shadow}${rotateWrap(n, markup)}`;
+        return `${shadow}${markup}`;
       }
-      if (isConvertibleShape(n) && (n.kind !== "rect" || (n.radius ?? 0) > 0.5)) {
+      if (isConvertibleShape(n)) {
         const s = n as ShapeNode;
         const contour = shapeContour(s);
-        const markup = `<path d="${esc(pathD(s.x, s.y, contour.points, contour.closed))}" fill="${esc(fill)}" stroke="${esc(n.stroke)}" stroke-width="${n.strokeWidth}"${extra}${shadowAttr(n)}${blendAttr(n)}/>`;
-        return `${shadow}${rotateWrap(n, markup)}`;
+        const markup = `<path d="${esc(bakedPathD(s, contour.points, contour.closed))}" fill="${esc(fill)}" stroke="${esc(n.stroke)}" stroke-width="${n.strokeWidth}"${extra}${shadowAttr(n)}${blendAttr(n)}/>`;
+        return `${shadow}${markup}`;
       }
       return `${shadow}${rotateWrap(n, `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" fill="${esc(fill)}" stroke="${esc(n.stroke)}" stroke-width="${n.strokeWidth}"${extra}${shadowAttr(n)}${blendAttr(n)}/>`)}`;
     })
