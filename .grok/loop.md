@@ -2,8 +2,8 @@
 
 ## Iteration
 
-2026-09-29 05:10 BST — Path-edit mid-drag applies from a frozen pointer-down snapshot. Undo restores the pre-drag points; handles do not accumulate from the live node.
+2026-09-29 14:10 BST — Present notes jump chip is live in the peek drawer. Edit notes on one frame, flip to another, open notes (N or double-click peek) and jump back. Peek strip + phosphor hairline restored.
 
 ## Next recommended
 
-Present peek chrome tests still expect older hairline class names. Isolate Show-all still restores from snapshot.
+Campaign PDF stack smoke in Present. Caret restore in the notes drawer when jumping frames.
