@@ -2,4 +2,8 @@
 
 ## Iteration
 
-2026-09-29 02:20 BST — Layers isolate. Alt-click the eye to hide every other layer (multi-select keeps the whole set). Show all restores the previous visibility map.
+2026-09-29 05:10 BST — Path-edit mid-drag applies from a frozen pointer-down snapshot. Undo restores the pre-drag points; handles do not accumulate from the live node.
+
+## Next recommended
+
+Present peek chrome tests still expect older hairline class names. Isolate Show-all still restores from snapshot.
