@@ -2,8 +2,18 @@
 
 ## Iteration
 
-2026-09-29 14:10 BST — Present notes jump chip is live in the peek drawer. Edit notes on one frame, flip to another, open notes (N or double-click peek) and jump back. Peek strip + phosphor hairline restored.
+2026-09-30 04:05 BST — Present wrap now drives `go()` via `campaignStackAdvance` (ArrowUp/Down last→first). Speaker notes persist the caret before a jump and restore it on the landed frame when notes stay open. Peek dwell keeps remaining across a notes-open wrap. Notes drawer is back on the present stage. `esc()` writes safe SVG entities again.
 
 ## Next recommended
 
-Campaign PDF stack smoke in Present. Caret restore in the notes drawer when jumping frames.
+Raster a three-board campaign PDF in the browser smoke and assert `/Type /Page` count.
+
+## Done
+
+- shouldRestoreNotesCaretAfterFrameJump after wrap / frame change.
+- persistNotesCaret before go/goTo; restoreNotesCaret + restoreCaretIfFocused on land.
+- PresentNotesPanel mounted; N / Escape still toggle and close.
+- campaignStackAdvance + peekWrapPendingAfterAdvance in PresentView.go.
+- Peek dots: data-present-peek, double-click opens peek notes, wrap keys ArrowUp/Down.
+- peekTickDwellAfterNotesClose exported from present-idle.
+- placeNodes typed; esc() entities in export.ts.
