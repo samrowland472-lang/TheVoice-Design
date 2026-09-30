@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Download, Grid3x3, Maximize2, Redo2, Ruler, Save, Scan, Search, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { downloadDataUrl, downloadPrintPdf, downloadSvg, exportJpeg, exportPng, exportPrintPng, slug } from "@/lib/design/export";
+import { cropSelectionDocument, selectionDocument } from "@/lib/design/selection-document";
 import { FORMATS } from "@/lib/design/formats";
 import { useDesign } from "@/lib/design/store";
 import { Button } from "@/components/ui/button";
@@ -25,14 +26,35 @@ export function TopBar() {
   const zoom = useDesign((s) => s.viewport.zoom);
   const togglePresent = useDesign((s) => s.togglePresent);
   const setPaletteOpen = useDesign((s) => s.setPaletteOpen);
+  const selection = useDesign((s) => s.selection);
   const [scale, setScale] = useState(2);
   const [exportOpen, setExportOpen] = useState(false);
 
   if (!doc) return null;
 
-  function exportFile(kind: "png" | "jpg" | "svg" | "print" | "pdf") {
+  function exportFile(kind: "png" | "jpg" | "svg" | "print" | "pdf" | "sel-png" | "sel-svg" | "crop-png" | "crop-svg") {
     if (!doc) return;
     save();
+    if (kind === "sel-png" || kind === "sel-svg" || kind === "crop-png" || kind === "crop-svg") {
+      const slice =
+        kind === "crop-png" || kind === "crop-svg"
+          ? cropSelectionDocument(doc, selection)
+          : selectionDocument(doc, selection);
+      if (!slice) {
+        toast.error("Select a layer first");
+        return;
+      }
+      if (kind === "sel-svg" || kind === "crop-svg") downloadSvg(slice);
+      else downloadDataUrl(exportPng(slice, scale), `${slug(slice.name)}.png`);
+      const cropped = kind.startsWith("crop");
+      toast.success(
+        kind.endsWith("svg")
+          ? `Exported ${cropped ? "crop" : "selection"} SVG`
+          : `Exported ${cropped ? "crop" : "selection"} PNG @${scale}× · ${slice.artboard.width}×${slice.artboard.height}`,
+      );
+      setExportOpen(false);
+      return;
+    }
     if (kind === "svg") {
       downloadSvg(doc);
     } else if (kind === "jpg") {
@@ -125,6 +147,18 @@ export function TopBar() {
             </Button>
             <Button size="sm" className="mb-1 w-full" onClick={() => exportFile("svg")}>
               SVG
+            </Button>
+            <Button size="sm" className="mb-1 w-full" disabled={selection.length === 0} onClick={() => exportFile("sel-png")}>
+              Selection PNG
+            </Button>
+            <Button size="sm" className="mb-1 w-full" disabled={selection.length === 0} onClick={() => exportFile("sel-svg")}>
+              Selection SVG
+            </Button>
+            <Button size="sm" className="mb-1 w-full" disabled={selection.length === 0} onClick={() => exportFile("crop-png")}>
+              Crop PNG
+            </Button>
+            <Button size="sm" className="mb-1 w-full" disabled={selection.length === 0} onClick={() => exportFile("crop-svg")}>
+              Crop SVG
             </Button>
             <Button size="sm" className="mb-1 w-full" variant="primary" onClick={() => exportFile("print")}>
               Print PNG
