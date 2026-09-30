@@ -2,18 +2,21 @@
 
 ## Iteration
 
-2026-09-30 04:05 BST — Present wrap now drives `go()` via `campaignStackAdvance` (ArrowUp/Down last→first). Speaker notes persist the caret before a jump and restore it on the landed frame when notes stay open. Peek dwell keeps remaining across a notes-open wrap. Notes drawer is back on the present stage. `esc()` writes safe SVG entities again.
+2026-09-30 13:05 BST — Tight-crop selection export. Crop PNG/SVG size the artboard to the selection AABB (2px pad), shift nodes onto that board, drop guides.
 
 ## Next recommended
 
-Raster a three-board campaign PDF in the browser smoke and assert `/Type /Page` count.
+Select one headline, Export → Crop PNG, and confirm the file is the layer box — not the full artboard. Compare with Selection PNG.
 
 ## Done
 
-- shouldRestoreNotesCaretAfterFrameJump after wrap / frame change.
-- persistNotesCaret before go/goTo; restoreNotesCaret + restoreCaretIfFocused on land.
-- PresentNotesPanel mounted; N / Escape still toggle and close.
-- campaignStackAdvance + peekWrapPendingAfterAdvance in PresentView.go.
-- Peek dots: data-present-peek, double-click opens peek notes, wrap keys ArrowUp/Down.
-- peekTickDwellAfterNotesClose exported from present-idle.
-- placeNodes typed; esc() entities in export.ts.
+- cropSelectionDocument(doc, ids)
+- Export menu: Crop PNG / Crop SVG (disabled with empty selection)
+- selectionDocument still exports on the original artboard
+- export-selection tests cover crop AABB + menu labels
+
+## Backlog
+
+- Isolate + export current isolate set
+- Layer groups
+- Shadow-aware crop pad
