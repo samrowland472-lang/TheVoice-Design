@@ -2,11 +2,13 @@
 
 ## Iteration
 
-2026-10-01 11:20 BST — Layers drag-drop keeps parentId. Drop the grip on the middle of a group to nest (phosphor ring, Into). Drop on the edge to sit beside that row and inherit its parent. A group cannot be dropped into itself. Group / Ungroup sit under the filter; the list indents and collapses.
+2026-10-01 12:05 BST — Layers drop polish. Illegal nests (a group into itself or a descendant) show a faint ring and No, and the drop is refused. Holding the grip on a collapsed group centre opens it so children can be targeted. The insert bar follows the row indent. While dragging, the panel says centre nests and the edge keeps that row's parent.
+
+2026-10-01 11:30 BST — Marquee through a group box now selects the group and its unlocked, visible children. Locked layers stay out of the pick. Shift-marquee still adds.
 
 ## Next recommended
 
-Marquee-select that includes a group's children when the group box is hit, without selecting locked layers.
+Rename a group from the canvas selection label.
 
 ## Done
 
@@ -21,9 +23,10 @@ Marquee-select that includes a group's children when the group box is hit, witho
 - Layers tree indent + collapse twist + Group/Ungroup chrome
 - Multi-select rotate around shared centre
 - Layers drag-drop that keeps parentId when dropping onto a group
+- Drop polish: No on illegal nests, dwell-open collapsed groups, indented insert bar
+- Marquee-select includes a group's children when the group box is hit, skips locked
 
 ## Backlog
 
-- Marquee-select that includes a group's children when the group box is hit, without selecting locked layers
 - Rename a group from the canvas selection label
 - Export SVG that wraps groups in `<g>` tags
