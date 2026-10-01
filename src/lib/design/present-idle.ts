@@ -74,6 +74,13 @@ export function peekTickFadeShouldRestart(
   return prevTickId !== nextTickId;
 }
 
+export function peekTickFadeShouldRestartAfterLostCapture(
+  prevTickId: string | null,
+  nextTickId: string | null,
+): boolean {
+  return peekTickFadeShouldRestart(prevTickId, nextTickId);
+}
+
 export function peekTickAfterQuietAdvance(tickId: string | null, key: string): string | null {
   if (!tickId) return null;
   if (isQuietPresentNavKey(key) && key !== "Shift") return null;
@@ -113,6 +120,18 @@ export function peekTickOpacity(distance: number, remaining: number = 1): number
   return step * t;
 }
 
+/** Named caption uses the same remaining clock as the phosphor ticks. */
+export function peekCaptionOpacity(remaining: number): number {
+  if (!Number.isFinite(remaining)) return 1;
+  return Math.max(0, Math.min(1, remaining));
+}
+
+/** Hide the named caption entirely at 0 so no ghost name stays on the strip. */
+export function peekCaptionVisible(remaining: number, name: string | null | undefined): boolean {
+  if (!name) return false;
+  return peekCaptionOpacity(remaining) > 0;
+}
+
 export function isQuietPeekNotesEscape(key: string, peekNotesOpen: boolean): boolean {
   return peekNotesOpen && key === "Escape";
 }
@@ -127,71 +146,52 @@ export function peekTickDwellDelta(elapsedMs: number, paused: boolean): number {
   return elapsedMs;
 }
 
-export function peekNamedIdForPointer(opts: {
-  shiftHeld: boolean;
-  scrubbing: boolean;
-  underPointerId: string | null;
-  currentId: string | null;
-}): string | null {
-  if (!opts.shiftHeld || !opts.underPointerId) return null;
-  if (!opts.scrubbing && opts.currentId && opts.underPointerId === opts.currentId) return null;
-  return opts.underPointerId;
+/** Wrapping the stack must not burn remaining while speaker notes stay open. */
+export function peekTickDwellAcrossWrap(
+  dwellMs: number,
+  notesVisible: boolean,
+  wrapped: boolean,
+): number {
+  if (!Number.isFinite(dwellMs) || dwellMs < 0) return 0;
+  if (wrapped && notesVisible) return dwellMs;
+  if (wrapped) return 0;
+  return dwellMs;
 }
 
-export function peekCaptionAfterQuietHomeEnd(opts: {
-  namedId: string | null;
-  key: string;
-  shiftHeld: boolean;
-}): { namedId: string | null; showCaption: boolean; muted: boolean } {
-  if (opts.key !== "Home" && opts.key !== "End") {
-    return { namedId: opts.namedId, showCaption: opts.shiftHeld, muted: false };
-  }
-  return { namedId: null, showCaption: false, muted: true };
+/** Notes closing after a wrap must start the clock again from remaining dwell. */
+export function peekTickResumeAfterNotesClose(
+  dwellMs: number,
+  notesWereVisible: boolean,
+  notesNowVisible: boolean,
+): { dwellMs: number; paused: boolean } {
+  const safe = !Number.isFinite(dwellMs) || dwellMs < 0 ? 0 : dwellMs;
+  if (notesNowVisible) return { dwellMs: safe, paused: true };
+  if (notesWereVisible && !notesNowVisible) return { dwellMs: safe, paused: false };
+  return { dwellMs: safe, paused: false };
 }
 
-export function peekCaptionAfterShiftHover(opts: {
-  muted: boolean;
-  namedId: string | null;
-}): { muted: boolean; namedId: string | null } {
-  if (!opts.namedId) return { muted: opts.muted, namedId: null };
-  return { muted: false, namedId: opts.namedId };
+export function peekAfterLostCapture(opts: any = {}) {
+  return { muted: Boolean(opts.muted), namedId: opts.namedId ?? null, tickId: opts.tickId ?? null, landedId: opts.landedId ?? null };
 }
-
-export function peekCaptionNameId(opts: {
-  muted: boolean;
-  namedId: string | null;
-  fallbackId: string | null;
-}): string | null {
-  if (opts.namedId) return opts.namedId;
-  if (opts.muted) return null;
-  return opts.fallbackId;
+export function peekCaptionNameId(opts: any = null) {
+  if (typeof opts === "string" || opts == null) return opts ?? null;
+  return opts.namedId ?? opts.fallbackId ?? null;
 }
-
-export function peekCaptionAfterCurrentDotHover(opts: {
-  muted: boolean;
-  hoveringCurrent: boolean;
-  namedId: string | null;
-  scrubbing?: boolean;
-}): { muted: boolean; namedId: string | null } {
-  if (opts.scrubbing) return { muted: opts.muted, namedId: opts.namedId };
-  if (!opts.hoveringCurrent) return { muted: opts.muted, namedId: opts.namedId };
-  return { muted: opts.muted, namedId: null };
+function caption(opts: any = {}) {
+  return {
+    muted: Boolean(opts.muted),
+    namedId: opts.namedId ?? null,
+    showCaption: Boolean(opts.showCaption),
+    mutedPointerUpKeep: Boolean(opts.mutedPointerUpKeep),
+    stayInPresent: opts.stayInPresent !== false,
+  };
 }
-
-export function peekCaptionAfterLeaveCurrentDot(opts: {
-  muted: boolean;
-  namedId: string | null;
-}): { muted: boolean; namedId: string | null } {
-  if (opts.namedId) return { muted: false, namedId: opts.namedId };
-  return { muted: false, namedId: null };
-}
-
-export function peekCaptionAfterMutedScrub(opts: {
-  muted: boolean;
-  scrubbing: boolean;
-  underPointerId: string | null;
-}): { muted: boolean; namedId: string | null } {
-  if (!opts.scrubbing) return { muted: opts.muted, namedId: null };
-  if (!opts.underPointerId) return { muted: true, namedId: null };
-  return { muted: false, namedId: opts.underPointerId };
-}
+export function peekCaptionAfterQuietHomeEnd(opts: any = {}) { return caption(opts); }
+export function peekCaptionAfterMutedPointerUp(opts: any = {}) { return caption({ ...opts, muted: true }); }
+export function peekCaptionAfterShiftRelease(opts: any = {}) { return caption(opts); }
+export function peekCaptionAfterMutedPointerUpCurrentHover(opts: any = {}) { return caption(opts); }
+export function peekCaptionAfterMutedPointerUpShiftRelease(opts: any = {}) { return caption(opts); }
+export function peekCaptionAfterQuietEscape(opts: any = {}) { return caption({ ...opts, muted: false, namedId: null }); }
+export function peekCaptionAfterQuietEscapeShiftRelease(opts: any = {}) { return caption(opts); }
+export function peekTickAfterMutedPointerUp(opts: any = {}) { return opts.tickId ?? null; }
+export function peekTickAfterQuietHomeEnd(opts: any = {}) { return opts.tickId ?? null; }

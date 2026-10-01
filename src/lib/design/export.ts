@@ -1,5 +1,5 @@
 import { partitionPathHoles, pathFillRule } from "./fill-rule";
-import { canvasFont, clampAxis, variationSettings } from "./fonts";
+import { applyFontFace, canvasFont, clampAxis, variationSettings } from "./fonts";
 import { bakeRotatedPoints, pathD } from "./path-curve";
 import { isConvertibleShape, shapeContour } from "./shape-to-path";
 import { drawPrintMarks, resolveBleed } from "./print-marks";
@@ -7,16 +7,29 @@ import { drawDocument } from "./render";
 import { canvasShadowParams } from "./shadow";
 import { layoutTextLines, measureTracked } from "./text-layout";
 import type { DesignDocument, DesignNode, PathNode, PathPoint, Shadow, ShapeNode, TextNode } from "./types";
+import {
+  buildJpegPdf as writeJpegPdf,
+  downloadBytes,
+  jpegFromDataUrl,
+  type JpegPdfPage,
+} from "./export-pdf";
+export { jpegFromDataUrl, downloadBytes } from "./export-pdf";
 
 export { canvasShadowParams } from "./shadow";
+void applyFontFace;
 
-function svgFilterId(id: string) {
-  return `sh-${id.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+/** JPEG pages are written with /Filter /DCTDecode. */
+export function buildJpegPdf(pages: JpegPdfPage[], title = "The Voice"): Uint8Array {
+  return writeJpegPdf(pages, title);
 }
 
-export function svgShadowFilter(id: string, shadow: Shadow): string {
+function svgFilterId(id: string, prefix = "") {
+  return `${prefix}sh-${id.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+}
+
+export function svgShadowFilter(id: string, shadow: Shadow, prefix = ""): string {
   const p = canvasShadowParams(shadow);
-  const fid = svgFilterId(id);
+  const fid = svgFilterId(id, prefix);
   const std = Math.max(0.01, p.blur / 2);
   if (p.inset) {
     return `<filter id="${fid}" x="-50%" y="-50%" width="200%" height="200%" color-interpolation-filters="sRGB"><feOffset in="SourceAlpha" dx="${p.ox}" dy="${p.oy}" result="off"/><feGaussianBlur in="off" stdDeviation="${std}" result="blur"/><feComposite in="SourceAlpha" in2="blur" operator="out" result="hollow"/><feFlood flood-color="${esc(p.color)}" result="tint"/><feComposite in="tint" in2="hollow" operator="in" result="shade"/><feComposite in="shade" in2="SourceGraphic" operator="over"/></filter>`;
@@ -28,9 +41,9 @@ export function svgShadowFilter(id: string, shadow: Shadow): string {
   return `<filter id="${fid}" x="-80%" y="-80%" width="260%" height="260%" color-interpolation-filters="sRGB">${dilate}<feGaussianBlur in="off" stdDeviation="${std}" result="blur"/><feFlood flood-color="${esc(p.color)}" result="tint"/><feComposite in="tint" in2="blur" operator="in" result="shade"/><feMerge><feMergeNode in="shade"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
 }
 
-function shadowAttr(n: DesignNode): string {
+function shadowAttr(n: DesignNode, prefix = ""): string {
   if (!n.shadow) return "";
-  return ` filter="url(#${svgFilterId(n.id)})"`;
+  return ` filter="url(#${svgFilterId(n.id, prefix)})"`;
 }
 
 const SVG_BLENDS = "multiply,screen,overlay,darken,lighten,soft-light,hard-light,color-dodge,color-burn";
@@ -142,8 +155,20 @@ export function slug(name: string) {
   );
 }
 
+export function printJpegPage(doc: DesignDocument, scale = 2, quality = 0.92) {
+  const url = rasterize(doc, scale, { cropMarks: true, paper: 36 }).toDataURL("image/jpeg", quality);
+  const edges = resolveBleed(doc);
+  const paper = Math.max(edges.left, edges.right, edges.top, edges.bottom, 36);
+  return {
+    width: Math.round((doc.artboard.width + paper * 2) * scale),
+    height: Math.round((doc.artboard.height + paper * 2) * scale),
+    jpeg: jpegFromDataUrl(url),
+  };
+}
+
 export function downloadPrintPdf(doc: DesignDocument) {
-  downloadDataUrl(exportPrintPng(doc), `${slug(doc.name)}-print.png`);
+  const page = printJpegPage(doc, 2, 0.92);
+  downloadBytes(buildJpegPdf([page], doc.name), `${slug(doc.name)}-print.pdf`, "application/pdf");
 }
 
 function estimateGlyphWidth(text: string, fontSize: number, opticalScale = 1) {
@@ -176,17 +201,27 @@ function estimateWidth(
   return measureTracked(text, (s) => estimateGlyphWidth(s, fontSize, opticalScale), letterSpacing);
 }
 
-function svgTextClipId(id: string) {
-  return `tb-${id.replace(/[^a-zA-Z0-9_-]/g, "")}`;
+function svgTextClipId(id: string, prefix = "") {
+  return `${prefix}tb-${id.replace(/[^a-zA-Z0-9_-]/g, "")}`;
 }
 
 /** Clip overflowing glyphs to the text box, matching canvas ctx.clip() on the node rect. */
-export function svgTextBoxClip(t: Pick<TextNode, "id" | "x" | "y" | "w" | "h">): string {
-  const cid = svgTextClipId(t.id);
+export function svgTextBoxClip(t: Pick<TextNode, "id" | "x" | "y" | "w" | "h">, prefix = ""): string {
+  const cid = svgTextClipId(t.id, prefix);
   return `<clipPath id="${cid}"><rect x="${t.x}" y="${t.y}" width="${t.w}" height="${t.h}"/></clipPath>`;
 }
 
-export function svgTextMarkup(t: TextNode, fill: string): string {
+export function collectSvgDefs(doc: DesignDocument, prefix = ""): string {
+  const parts: string[] = [];
+  for (const n of doc.nodes) {
+    if (!n.visible) continue;
+    if (n.shadow) parts.push(svgShadowFilter(n.id, n.shadow, prefix));
+    if (n.kind === "text") parts.push(svgTextBoxClip(n as TextNode, prefix));
+  }
+  return parts.join("");
+}
+
+export function svgTextMarkup(t: TextNode, fill: string, prefix = ""): string {
   const opszScale = opticalWrapScale(t);
   const measure = (s: string) => estimateWidth(s, t.fontSize, t.letterSpacing ?? 0, opszScale);
   const { lines, lineHeight, startY } = layoutTextLines(t, measure);
@@ -210,21 +245,18 @@ export function svgTextMarkup(t: TextNode, fill: string): string {
       return `<tspan x="${ax}" y="${y}">${esc(line)}</tspan>`;
     })
     .join("");
-  const clip = ` clip-path="url(#${svgTextClipId(t.id)})"`;
-  return `${svgTextBoxClip(t)}<text fill="${esc(fill)}" font-size="${t.fontSize}" font-family="${family}" font-weight="${weight}" text-anchor="${anchor}" dominant-baseline="hanging"${tracking}${styleAttr}${shadowAttr(t)}${clip}>${tspans}</text>`;
+  const clip = ` clip-path="url(#${svgTextClipId(t.id, prefix)})"`;
+  return `<text fill="${esc(fill)}" font-size="${t.fontSize}" font-family="${family}" font-weight="${weight}" text-anchor="${anchor}" dominant-baseline="hanging"${tracking}${styleAttr}${shadowAttr(t, prefix)}${clip}>${tspans}</text>`;
 }
 
-export function exportSvg(doc: DesignDocument): string {
-  const { width, height, background } = doc.artboard;
-  const bg = typeof background === "string" ? background : "#ffffff";
-  const body = doc.nodes
+export function exportSvgBody(doc: DesignDocument, prefix = ""): string {
+  return doc.nodes
     .filter((n) => n.visible)
     .map((n) => {
       const fill = typeof n.fill === "string" ? n.fill : "#3fc6ff";
       const extra = svgStrokeStyle(n);
-      const shadow = n.shadow ? svgShadowFilter(n.id, n.shadow) : "";
       if (n.kind === "text") {
-        return `${shadow}${rotateWrap(n, svgTextMarkup(n as TextNode, fill))}`;
+        return rotateWrap(n, svgTextMarkup(n as TextNode, fill, prefix));
       }
       if (n.kind === "path") {
         const p = n as PathNode;
@@ -239,19 +271,28 @@ export function exportSvg(doc: DesignDocument): string {
           )
           .join("");
         const islandGroup = holeIslands ? `<g data-islands="1">${holeIslands}</g>` : "";
-        const markup = `<path d="${esc(parts.join(" "))}" fill="${esc(fill)}" stroke="${esc(n.stroke)}" stroke-width="${n.strokeWidth}"${extra}${ruleAttr}${shadowAttr(n)}${blendAttr(n)}/>${islandGroup}`;
-        return `${shadow}${markup}`;
+        return `<path d="${esc(parts.join(" "))}" fill="${esc(fill)}" stroke="${esc(n.stroke)}" stroke-width="${n.strokeWidth}"${extra}${ruleAttr}${shadowAttr(n, prefix)}${blendAttr(n)}/>${islandGroup}`;
       }
       if (isConvertibleShape(n)) {
         const s = n as ShapeNode;
         const contour = shapeContour(s);
-        const markup = `<path d="${esc(bakedPathD(s, contour.points, contour.closed))}" fill="${esc(fill)}" stroke="${esc(n.stroke)}" stroke-width="${n.strokeWidth}"${extra}${shadowAttr(n)}${blendAttr(n)}/>`;
-        return `${shadow}${markup}`;
+        return `<path d="${esc(bakedPathD(s, contour.points, contour.closed))}" fill="${esc(fill)}" stroke="${esc(n.stroke)}" stroke-width="${n.strokeWidth}"${extra}${shadowAttr(n, prefix)}${blendAttr(n)}/>`;
       }
-      return `${shadow}${rotateWrap(n, `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" fill="${esc(fill)}" stroke="${esc(n.stroke)}" stroke-width="${n.strokeWidth}"${extra}${shadowAttr(n)}${blendAttr(n)}/>`)}`;
+      return rotateWrap(
+        n,
+        `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" fill="${esc(fill)}" stroke="${esc(n.stroke)}" stroke-width="${n.strokeWidth}"${extra}${shadowAttr(n, prefix)}${blendAttr(n)}/>`,
+      );
     })
     .join("");
-  return `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}"><rect width="100%" height="100%" fill="${esc(bg)}"/>${body}</svg>`;
+}
+
+export function exportSvg(doc: DesignDocument): string {
+  const { width, height, background } = doc.artboard;
+  const bg = typeof background === "string" ? background : "#ffffff";
+  const defs = collectSvgDefs(doc);
+  const defsBlock = defs ? `<defs>${defs}</defs>` : "";
+  const body = exportSvgBody(doc);
+  return `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${defsBlock}<rect width="100%" height="100%" fill="${esc(bg)}"/>${body}</svg>`;
 }
 
 export function downloadSvg(doc: DesignDocument) {
@@ -263,8 +304,19 @@ export function downloadSvg(doc: DesignDocument) {
 
 function esc(s: string) {
   return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/&/g, "&" + "amp;")
+    .replace(/</g, "&" + "lt;")
+    .replace(/>/g, "&" + "gt;")
+    .replace(/"/g, "&" + "quot;");
+}
+
+export function pdfTypePageCount(bytes: Uint8Array): number {
+  const text = new TextDecoder("latin1").decode(bytes);
+  return (text.match(/\/Type\s*\/Page(?!s)/g) || []).length;
+}
+
+export function pdfPagesCountField(bytes: Uint8Array): number {
+  const text = new TextDecoder("latin1").decode(bytes);
+  const match = text.match(/\/Count\s+(\d+)/);
+  return match ? Number(match[1]) : 0;
 }

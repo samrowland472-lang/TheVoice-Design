@@ -339,6 +339,12 @@ function chainHalves(frags: Half[]): Ring[] {
   return rings;
 }
 
+/**
+ * Nest result rings by nearest (smallest) container.
+ * Each uncontained ring is an island outer. Every descendant — including an
+ * island that sits inside a punched hole — stays on that island as an evenodd
+ * contour so apply keeps hole ownership instead of minting a second fill.
+ */
 export function groupIslands(rings: Ring[]): { outer: Ring; holes: Ring[] }[] {
   const cleaned = rings.map(cleanRing).filter((r) => r.length >= 3);
   if (!cleaned.length) return [];

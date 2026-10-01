@@ -11,6 +11,7 @@ export type BlendMode =
   | "color-burn";
 
 export type Align = "left" | "center" | "right";
+export type Valign = "top" | "middle" | "bottom";
 export type Tool =
   | "select"
   | "hand"
@@ -23,6 +24,7 @@ export type Tool =
   | "arrow"
   | "text"
   | "pen"
+  | "knife"
   | "brush"
   | "eraser"
   | "image"
@@ -38,7 +40,8 @@ export type NodeKind =
   | "text"
   | "image"
   | "path"
-  | "paint";
+  | "paint"
+  | "group";
 
 export interface GradientFill {
   type: "linear";
@@ -53,6 +56,8 @@ export interface Shadow {
   blur: number;
   ox: number;
   oy: number;
+  spread?: number;
+  inset?: boolean;
 }
 
 export interface BaseNode {
@@ -71,10 +76,21 @@ export interface BaseNode {
   fill: Fill;
   stroke: string;
   strokeWidth: number;
+  strokeDash: number;
+  strokeDashOffset: number;
+  lineCap: CanvasLineCap;
+  lineJoin: CanvasLineJoin;
+  miterLimit: number;
   radius: number;
   shadow: Shadow | null;
   linkId?: string;
   href?: string;
+  parentId?: string;
+}
+
+export interface GroupNode extends BaseNode {
+  kind: "group";
+  collapsed?: boolean;
 }
 
 export interface TextNode extends BaseNode {
@@ -87,11 +103,18 @@ export interface TextNode extends BaseNode {
   lineHeight: number;
   align: Align;
   uppercase: boolean;
+  wrap?: boolean;
+  valign?: Valign;
+  opticalSize?: number;
+  fontWidth?: number;
+  fontSlant?: number;
+  fontItalic?: number;
+  fontGrade?: number;
+  fontSoft?: number;
+  fontWonk?: number;
 }
 
-export interface ImageNode extends BaseNode {
-  kind: "image";
-  src: string;
+export interface BitmapAdjust {
   crop: { x: number; y: number; w: number; h: number } | null;
   filters: {
     brightness: number;
@@ -101,7 +124,11 @@ export interface ImageNode extends BaseNode {
   };
 }
 
-/** Anchor on a path. `in` / `out` are offsets from the anchor. */
+export interface ImageNode extends BaseNode, BitmapAdjust {
+  kind: "image";
+  src: string;
+}
+
 export interface PathPoint {
   x: number;
   y: number;
@@ -116,9 +143,10 @@ export interface PathNode extends BaseNode {
   closed: boolean;
   holes?: PathPoint[][];
   fillRule?: "evenodd" | "nonzero";
+  holeFillRules?: ("evenodd" | "nonzero")[];
 }
 
-export interface PaintNode extends BaseNode {
+export interface PaintNode extends BaseNode, BitmapAdjust {
   kind: "paint";
   bitmap: string;
 }
@@ -126,9 +154,17 @@ export interface PaintNode extends BaseNode {
 export interface ShapeNode extends BaseNode {
   kind: "rect" | "ellipse" | "line" | "polygon" | "star" | "arrow";
   sides?: number;
+  headScale?: number;
 }
 
-export type DesignNode = TextNode | ImageNode | PathNode | PaintNode | ShapeNode;
+export type DesignNode = TextNode | ImageNode | PathNode | PaintNode | ShapeNode | GroupNode;
+
+export interface BleedEdges {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
 
 export interface Artboard {
   width: number;
@@ -137,6 +173,18 @@ export interface Artboard {
   name: string;
   formatId: string;
   bleed?: number;
+  bleedEdges?: BleedEdges;
+}
+
+export interface Guide {
+  id: string;
+  axis: "x" | "y";
+  pos: number;
+  locked?: boolean;
+  hidden?: boolean;
+  color?: string;
+  label?: string;
+  dash?: "solid" | "dash" | "tight";
 }
 
 export interface DesignDocument {
@@ -147,7 +195,7 @@ export interface DesignDocument {
   updatedAt: number;
   createdAt: number;
   thumbnail?: string;
-  guides?: { id: string; axis: "x" | "y"; pos: number }[];
+  guides?: Guide[];
   campaignId?: string;
   notes?: string;
 }
@@ -164,6 +212,7 @@ export interface ProjectMeta {
   folder?: string;
   tags?: string[];
   campaignId?: string;
+  campaignOrder?: number;
 }
 
 export interface BrandColor {
@@ -213,4 +262,12 @@ export function isPath(n: DesignNode): n is PathNode {
 
 export function isPaint(n: DesignNode): n is PaintNode {
   return n.kind === "paint";
+}
+
+export function isGroup(n: DesignNode): n is GroupNode {
+  return n.kind === "group";
+}
+
+export function isBitmap(n: DesignNode): n is ImageNode | PaintNode {
+  return n.kind === "image" || n.kind === "paint";
 }

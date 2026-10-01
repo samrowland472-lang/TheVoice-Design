@@ -20,6 +20,11 @@ const BASE = {
   fill: "#d9f5e3" as Fill,
   stroke: "transparent",
   strokeWidth: 0,
+  strokeDash: 0,
+  strokeDashOffset: 0,
+  lineCap: "round" as CanvasLineCap,
+  lineJoin: "round" as CanvasLineJoin,
+  miterLimit: 4,
   radius: 0,
   shadow: null,
 };
@@ -34,6 +39,7 @@ export function shape(
     name: kind,
     kind,
     sides: kind === "polygon" ? 6 : kind === "star" ? 5 : undefined,
+    headScale: kind === "arrow" ? 1 : undefined,
     ...patch,
   };
 }
@@ -53,6 +59,8 @@ export function text(
     lineHeight: 1.1,
     align: "left" as Align,
     uppercase: false,
+    wrap: true,
+    valign: "top",
     fill: "#d9f5e3",
     ...patch,
   };
@@ -74,7 +82,7 @@ export function imageNode(
 }
 
 export function pathNode(
-  patch: Partial<PathNode> & { x: number; y: number; w: number; h: number; points: { x: number; y: number }[] },
+  patch: Partial<PathNode> & { x: number; y: number; w: number; h: number; points: PathNode["points"] },
 ): PathNode {
   return {
     ...BASE,
@@ -105,6 +113,8 @@ export function paintLayer(
     h,
     fill: "transparent",
     bitmap,
+    crop: null,
+    filters: { brightness: 1, contrast: 1, saturate: 1, blur: 0 },
   };
 }
 

@@ -1,32 +1,51 @@
-import { useEffect, useMemo, useState, type MouseEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Toaster } from "sonner";
-import { FORMATS } from "@/lib/design/formats";
-import { screenToDoc } from "@/lib/design/render";
+import {
+  convertSelectedShapeToPath,
+  convertSelectedTextToPath,
+  offsetSelectedPath,
+  outlineSelectedStroke,
+  roundSelectedPathCorners,
+  simplifySelectedPath,
+} from "@/lib/design/offset-actions";
+import { watchFontsForWrapCache } from "@/lib/design/watch-fonts";
+import { bleedMmToPx } from "@/lib/design/print-marks";
 import { useDesign } from "@/lib/design/store";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { CommandPalette, type CommandItem } from "./command-palette";
 import { AiPanel } from "./ai-panel";
 import { CanvasStage } from "./canvas-stage";
+import { RulerLayer } from "./ruler-layer";
 import { Inspector } from "./inspector";
 import { LayersPanel } from "./layers-panel";
+import { MixedInk } from "./mixed-ink";
+import { MixedType } from "./mixed-type";
+import type { DesignNode, TextNode } from "@/lib/design/types";
 import { PaintDock } from "./paint-dock";
 import { ToolRail } from "./tool-rail";
 import { TopBar } from "./top-bar";
 import { useShortcuts } from "./use-shortcuts";
+import { CampaignStrip } from "./campaign-strip";
+import { PresentView } from "./present-chrome";
 
 export function StudioApp({ id }: { id: string }) {
   const navigate = useNavigate();
   const open = useDesign((s) => s.open);
   const doc = useDesign((s) => s.doc);
+  const selection = useDesign((s) => s.selection);
+  const brand = useDesign((s) => s.brand);
+  const color = useDesign((s) => s.color);
   const save = useDesign((s) => s.save);
   const present = useDesign((s) => s.present);
   const paletteOpen = useDesign((s) => s.paletteOpen);
   const setPaletteOpen = useDesign((s) => s.setPaletteOpen);
-  const setPresent = useDesign((s) => s.setPresent);
   const [sheet, setSheet] = useState<"layers" | "inspect" | "ai" | null>(null);
   useShortcuts();
+
+  useEffect(() => {
+    watchFontsForWrapCache();
+  }, []);
 
   useEffect(() => {
     open(id);
@@ -39,7 +58,7 @@ export function StudioApp({ id }: { id: string }) {
     const t = window.setInterval(() => {
       if (useDesign.getState().dirty) useDesign.getState().save();
     }, 8000);
-    return () => window.clearInterval(t);
+    return () => window.clearTimeout(t);
   }, []);
 
   useEffect(() => {
@@ -53,47 +72,48 @@ export function StudioApp({ id }: { id: string }) {
   const commands = useMemo<CommandItem[]>(() => {
     const s = () => useDesign.getState();
     return [
-      { id: "save", label: "Save", group: "File", hint: "⌘S", run: () => s().save() },
-      { id: "undo", label: "Undo", group: "Edit", hint: "⌘Z", run: () => s().undo() },
-      { id: "redo", label: "Redo", group: "Edit", hint: "⇧⌘Z", run: () => s().redo() },
-      { id: "copy", label: "Copy", group: "Edit", hint: "⌘C", run: () => s().copySelected() },
-      { id: "paste", label: "Paste", group: "Edit", hint: "⌘V", run: () => s().pasteClipboard() },
-      { id: "dup", label: "Duplicate", group: "Edit", hint: "⌘D", run: () => s().duplicateSelected() },
-      { id: "dup-link", label: "Linked duplicate", group: "Edit", hint: "⇧⌘D", run: () => s().duplicateLinked() },
-      { id: "unlink", label: "Unlink instance", group: "Edit", run: () => s().unlinkSelected() },
-      { id: "all", label: "Select all", group: "Edit", hint: "⌘A", run: () => s().selectAll() },
-      { id: "del", label: "Delete", group: "Edit", hint: "⌫", run: () => s().removeSelected() },
+      { id: "save", label: "Save", group: "File", hint: "Cmd+S", run: () => s().save() },
+      { id: "undo", label: "Undo", group: "Edit", hint: "Cmd+Z", run: () => s().undo() },
       { id: "fit", label: "Fit artboard", group: "View", hint: "0", run: () => s().requestFit() },
-      { id: "z1", label: "Zoom 100%", group: "View", hint: "1", run: () => s().requestZoom(1) },
-      { id: "z2", label: "Zoom 200%", group: "View", hint: "2", run: () => s().requestZoom(2) },
-      { id: "present", label: "Present artboard", group: "View", hint: "⇧P", run: () => s().togglePresent() },
-      { id: "grid", label: "Toggle grid", group: "View", run: () => s().toggleGrid() },
-      { id: "rulers", label: "Toggle rulers", group: "View", run: () => s().toggleRulers() },
-      { id: "safe", label: "Toggle safe area", group: "View", run: () => s().toggleSafeArea() },
-      { id: "clearguides", label: "Clear guides", group: "View", run: () => s().clearGuides() },
-      { id: "snap", label: "Toggle snap", group: "View", run: () => s().toggleSnap() },
-      { id: "fliph", label: "Flip horizontal", group: "Arrange", run: () => s().flipSelected("h") },
-      { id: "flipv", label: "Flip vertical", group: "Arrange", run: () => s().flipSelected("v") },
-      { id: "r90", label: "Rotate 90°", group: "Arrange", run: () => s().rotateSelected(90) },
-      { id: "front", label: "Bring to front", group: "Arrange", run: () => s().bringSelected("top") },
-      { id: "back", label: "Send to back", group: "Arrange", run: () => s().bringSelected("bottom") },
+      { id: "present", label: "Present artboard", group: "View", hint: "Shift+P", run: () => s().togglePresent() },
+      {
+        id: "present-full",
+        label: "Fullscreen present (keep campaign rail)",
+        group: "View",
+        hint: "F in present",
+        run: () => {
+          s().setPresent(true);
+        },
+      },
+      { id: "safe-area", label: "Show / hide safe area", group: "View", run: () => s().toggleSafeArea() },
+      { id: "print-marks", label: "Show / hide print marks", group: "Print", run: () => s().togglePrintMarks() },
       { id: "select", label: "Select tool", group: "Tools", hint: "V", run: () => s().setTool("select") },
-      { id: "rect", label: "Rectangle", group: "Tools", hint: "R", run: () => s().setTool("rect") },
-      { id: "ellipse", label: "Ellipse", group: "Tools", hint: "O", run: () => s().setTool("ellipse") },
-      { id: "text", label: "Text", group: "Tools", hint: "T", run: () => s().setTool("text") },
-      { id: "brush", label: "Brush", group: "Tools", hint: "B", run: () => s().setTool("brush") },
       { id: "pen", label: "Pen", group: "Tools", hint: "P", run: () => s().setTool("pen") },
-      { id: "pen-close", label: "Close path", group: "Tools", hint: "Enter", run: () => s().closeSelectedPath() },
-      { id: "pen-pop", label: "Undo last pen point", group: "Tools", hint: "⌫", run: () => s().popLastPathPoint() },
-      { id: "image", label: "Place image", group: "Tools", run: () => s().setTool("image") },
+      { id: "knife", label: "Knife — cut a path segment", group: "Tools", hint: "K", run: () => s().setTool("knife") },
+      { id: "type-to-path", label: "Convert type to path", group: "Path", run: () => convertSelectedTextToPath() },
+      { id: "shape-to-path", label: "Convert shape to path", group: "Path", run: () => convertSelectedShapeToPath() },
+      { id: "outline", label: "Outline stroke", group: "Path", run: () => outlineSelectedStroke() },
+      { id: "offset-out", label: "Offset path out", group: "Path", run: () => offsetSelectedPath("out") },
+      { id: "offset-in", label: "Offset path in", group: "Path", run: () => offsetSelectedPath("in") },
+      { id: "round-corners", label: "Round path corners", group: "Path", run: () => roundSelectedPathCorners() },
+      { id: "simplify", label: "Simplify path", group: "Path", run: () => simplifySelectedPath() },
       { id: "home", label: "Back to templates", group: "File", run: () => void navigate({ to: "/" }) },
+      { id: "bleed-none", label: "Bleed none", group: "Print", run: () => s().setBleed(0) },
+      { id: "bleed-3mm", label: "Bleed 3 mm", group: "Print", run: () => s().setBleed(bleedMmToPx(3)) },
+      { id: "bleed-6mm", label: "Bleed 6 mm", group: "Print", run: () => s().setBleed(bleedMmToPx(6)) },
+      { id: "reset-guide-colors", label: "Reset guide colors", group: "Print", run: () => s().resetGuideColors?.() },
+      { id: "reset-guide-dashes", label: "Reset guide dashes", group: "Print", run: () => s().resetGuideDashes?.() },
+      { id: "clear-guide-names", label: "Clear guide names", group: "Print", run: () => s().clearGuideLabels?.() },
     ];
   }, [navigate]);
+
+  const selectedNodes = (doc?.nodes ?? []).filter((n): n is DesignNode => selection.includes(n.id));
+  const selectedText = selectedNodes.filter((n): n is TextNode => n.kind === "text");
 
   if (!doc) {
     return (
       <div className="flex flex-1 items-center justify-center text-ink-dim">
-        Loading artboard…
+        Loading artboard
       </div>
     );
   }
@@ -109,7 +129,10 @@ export function StudioApp({ id }: { id: string }) {
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         <ToolRail />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <CanvasStage />
+          <div className="relative min-h-0 flex-1">
+            <CanvasStage />
+            <RulerLayer />
+          </div>
           <PaintDock />
         </div>
         <aside className="hidden w-[280px] shrink-0 flex-col border-l border-border bg-surface md:flex">
@@ -117,23 +140,29 @@ export function StudioApp({ id }: { id: string }) {
             <LayersPanel />
           </div>
           <div className="min-h-0 flex-1 overflow-auto">
+            {selectedNodes.length >= 2 && (
+              <div className="px-3">
+                <MixedInk nodes={selectedNodes} brandColors={brand.colors} ink={color} />
+                {selectedText.length >= 2 && <MixedType nodes={selectedText} />}
+              </div>
+            )}
             <Inspector />
           </div>
           <AiPanel />
         </aside>
       </div>
       <div className="flex shrink-0 border-t border-border md:hidden">
-        {(["layers", "inspect", "ai"] as const).map((id) => (
+        {(["layers", "inspect", "ai"] as const).map((tab) => (
           <button
-            key={id}
+            key={tab}
             type="button"
-            onClick={() => setSheet(sheet === id ? null : id)}
+            onClick={() => setSheet(sheet === tab ? null : tab)}
             className={cn(
               "h-12 flex-1 text-xs font-medium capitalize",
-              sheet === id ? "text-phosphor" : "text-ink-dim",
+              sheet === tab ? "text-phosphor" : "text-ink-dim",
             )}
           >
-            {id === "ai" ? "Director" : id === "inspect" ? "Inspect" : "Layers"}
+            {tab === "ai" ? "Director" : tab === "inspect" ? "Inspect" : "Layers"}
           </button>
         ))}
       </div>
@@ -151,261 +180,24 @@ export function StudioApp({ id }: { id: string }) {
             </div>
             <div className="min-h-0 flex-1 overflow-auto">
               {sheet === "layers" && <LayersPanel />}
-              {sheet === "inspect" && <Inspector />}
+              {sheet === "inspect" && (
+                <>
+                  {selectedNodes.length >= 2 && (
+                    <div className="px-3">
+                      <MixedInk nodes={selectedNodes} brandColors={brand.colors} ink={color} />
+                      {selectedText.length >= 2 && <MixedType nodes={selectedText} />}
+                    </div>
+                  )}
+                  <Inspector />
+                </>
+              )}
               {sheet === "ai" && <AiPanel />}
             </div>
           </div>
         </div>
       )}
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} commands={commands} />
-      <Toaster
-        theme="dark"
-        toastOptions={{
-          style: {
-            background: "#121613",
-            border: "1px solid #263029",
-            color: "#d9f5e3",
-          },
-        }}
-      />
+      <Toaster theme="dark" />
     </div>
   );
 }
-
-function PresentView() {
-  const navigate = useNavigate();
-  const doc = useDesign((s) => s.doc);
-  const index = useDesign((s) => s.index);
-  const save = useDesign((s) => s.save);
-  const setPresent = useDesign((s) => s.setPresent);
-  const [hot, setHot] = useState<{
-    label: string;
-    x: number;
-    y: number;
-    w: number;
-    h: number;
-    rotation: number;
-  } | null>(null);
-  const viewport = useDesign((s) => s.viewport);
-  if (!doc) return null;
-  const live = doc;
-  const pages = live.campaignId ? index.filter((p) => p.campaignId === live.campaignId) : [{ id: live.id, name: live.name }];
-  const i = Math.max(0, pages.findIndex((p) => p.id === live.id));
-
-  function go(delta: number) {
-    const next = pages[i + delta];
-    if (!next) return;
-    save();
-    void navigate({ to: "/studio/$id", params: { id: next.id } });
-  }
-
-  function follow(href: string) {
-    if (href.startsWith("doc:")) {
-      const id = href.slice(4);
-      if (!id || id === live.id) return;
-      save();
-      void navigate({ to: "/studio/$id", params: { id } });
-      return;
-    }
-    if (href.startsWith("https://") || href.startsWith("http://")) {
-      window.open(href, "_blank", "noopener");
-    }
-  }
-
-  function hotspotAt(e: MouseEvent<HTMLButtonElement>) {
-    const viewport = useDesign.getState().viewport;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const d = screenToDoc(e.clientX - rect.left, e.clientY - rect.top, viewport);
-    for (let n = live.nodes.length - 1; n >= 0; n--) {
-      const node = live.nodes[n]!;
-      if (!node.visible || !node.href) continue;
-      if (d.x >= node.x && d.x <= node.x + node.w && d.y >= node.y && d.y <= node.y + node.h) return node;
-    }
-    return null;
-  }
-
-  function hotspotLabel(href: string) {
-    if (href.startsWith("doc:")) {
-      const id = href.slice(4);
-      return index.find((p) => p.id === id)?.name ?? "Frame";
-    }
-    try {
-      return new URL(href).hostname.replace(/^www\./, "");
-    } catch {
-      return href;
-    }
-  }
-
-  function onStageClick(e: MouseEvent<HTMLButtonElement>) {
-    const node = hotspotAt(e);
-    if (node?.href) {
-      follow(node.href);
-      return;
-    }
-    go(1);
-  }
-
-  function onStageMove(e: MouseEvent<HTMLButtonElement>) {
-    const node = hotspotAt(e);
-    const next = node?.href
-      ? { label: hotspotLabel(node.href), x: node.x, y: node.y, w: node.w, h: node.h, rotation: node.rotation }
-      : null;
-    e.currentTarget.style.cursor = next ? "pointer" : "default";
-    setHot((cur) => (cur?.label === next?.label && cur?.x === next?.x && cur?.y === next?.y ? cur : next));
-  }
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) return;
-      if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") {
-        e.preventDefault();
-        go(1);
-      }
-      if (e.key === "ArrowLeft" || e.key === "PageUp") {
-        e.preventDefault();
-        go(-1);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  });
-
-  return (
-    <div className="flex min-h-0 flex-1 flex-col bg-ground">
-      <div className="flex h-12 shrink-0 items-center gap-3 border-b border-border px-3">
-        <Button size="sm" onClick={() => setPresent(false)}>
-          Exit
-        </Button>
-        <span className="truncate text-sm text-ink">{doc.name}</span>
-        {pages.length > 1 && (
-          <span className="font-mono text-[10px] text-ink-faint">
-            {i + 1} / {pages.length}
-          </span>
-        )}
-        <span className={cn("ml-auto font-mono text-[10px] uppercase", hot ? "text-phosphor" : "text-ink-faint")}>
-          {hot ? hot.label : "Present · click or →"}
-        </span>
-      </div>
-      <div className="relative min-h-0 flex-1">
-        <CanvasStage />
-        {hot && (
-          <div
-            className="pointer-events-none absolute border border-phosphor"
-            style={{
-              left: hot.x * viewport.zoom + viewport.x,
-              top: hot.y * viewport.zoom + viewport.y,
-              width: hot.w * viewport.zoom,
-              height: hot.h * viewport.zoom,
-              transform: hot.rotation ? `rotate(${hot.rotation}deg)` : undefined,
-              transformOrigin: "center center",
-              boxShadow: "0 0 0 1px rgba(63,198,255,0.35), 0 0 12px rgba(63,198,255,0.25)",
-            }}
-          />
-        )}
-        <button
-          type="button"
-          className="absolute inset-0 bg-transparent"
-          style={{ cursor: hot ? "pointer" : "default" }}
-          aria-label={hot ? `Open ${hot.label}` : "Next frame"}
-          onClick={onStageClick}
-          onMouseMove={onStageMove}
-          onMouseLeave={() => setHot(null)}
-          onContextMenu={(e) => {
-            e.preventDefault();
-            go(-1);
-          }}
-        />
-      </div>
-      {(doc.notes || pages.length > 1) && (
-        <div className="flex shrink-0 items-start gap-3 border-t border-border bg-surface px-4 py-3">
-          <p className="min-w-0 flex-1 text-sm text-ink-dim whitespace-pre-wrap">{doc.notes || "No notes"}</p>
-          {pages.length > 1 && (
-            <div className="flex gap-1">
-              <Button size="sm" variant="ghost" disabled={i <= 0} onClick={() => go(-1)}>
-                Prev
-              </Button>
-              <Button size="sm" variant="ghost" disabled={i >= pages.length - 1} onClick={() => go(1)}>
-                Next
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function CampaignStrip() {
-  const navigate = useNavigate();
-  const doc = useDesign((s) => s.doc);
-  const index = useDesign((s) => s.index);
-  const makeCampaign = useDesign((s) => s.makeCampaign);
-  const addCampaignPage = useDesign((s) => s.addCampaignPage);
-  const save = useDesign((s) => s.save);
-  if (!doc) return null;
-  const pages = doc.campaignId ? index.filter((p) => p.campaignId === doc.campaignId) : [];
-  const used = new Set(pages.map((p) => p.formatId));
-
-  function go(id: string) {
-    save();
-    void navigate({ to: "/studio/$id", params: { id } });
-  }
-
-  if (!doc.campaignId) {
-    return (
-      <div className="flex h-9 shrink-0 items-center gap-2 border-b border-border px-3">
-        <button
-          type="button"
-          className="font-mono text-[10px] tracking-[0.16em] text-ink-faint uppercase hover:text-phosphor"
-          onClick={() => makeCampaign()}
-        >
-          Campaign · story + square + banner
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex h-9 shrink-0 items-center gap-1 overflow-x-auto border-b border-border px-2">
-      {pages.map((p) => (
-        <button
-          key={p.id}
-          type="button"
-          onClick={() => go(p.id)}
-          className={cn(
-            "h-7 shrink-0 rounded-[8px] px-2 font-mono text-[10px] uppercase tracking-wide",
-            p.id === doc.id ? "bg-phosphor text-phosphor-ink" : "text-ink-dim hover:text-ink",
-          )}
-        >
-          {shortFormat(p.formatId)}
-        </button>
-      ))}
-      <select
-        className="h-7 rounded-[8px] border border-border bg-surface-alt px-1 font-mono text-[10px] text-ink-dim"
-        value=""
-        aria-label="Add campaign page"
-        onChange={(e) => {
-          const id = e.target.value;
-          if (!id) return;
-          const pageId = addCampaignPage(id);
-          if (pageId) go(pageId);
-        }}
-      >
-        <option value="">+ page</option>
-        {FORMATS.filter((f) => !used.has(f.id)).map((f) => (
-          <option key={f.id} value={f.id}>
-            {f.label}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
-function shortFormat(id: string) {
-  if (id === "ig-story" || id === "tiktok") return "Story";
-  if (id === "ig-post" || id === "square" || id === "album") return "Square";
-  if (id === "x-post" || id === "linkedin" || id === "wide") return "Banner";
-  return FORMATS.find((f) => f.id === id)?.label ?? id;
-}
-

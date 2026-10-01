@@ -1,5 +1,13 @@
 import { useEffect } from "react";
 import { imageNode } from "@/lib/design/node-factory";
+import { applyBoolean, requestFitSelection, smoothSelectedPath } from "@/lib/design/boolean-actions";
+import {
+  cornerLastPenPoint,
+  jumpPathHole,
+  jumpPathHolePoint,
+  stepPathHole,
+  stepPathHolePoint,
+} from "@/lib/design/path-actions";
 import { useDesign } from "@/lib/design/store";
 import type { Tool } from "@/lib/design/types";
 
@@ -11,13 +19,14 @@ const KEYS: Record<string, Tool> = {
   l: "line",
   t: "text",
   p: "pen",
+  k: "knife",
   b: "brush",
   e: "eraser",
   i: "eyedropper",
   f: "frame",
 };
 
-export function useShortcuts() {
+export function useShortcuts(_opts?: { onPalette?: () => void }) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
@@ -45,6 +54,7 @@ export function useShortcuts() {
           return;
         }
         if (s.present) {
+          s.setPresent(false);
           return;
         }
         if (s.tool === "pen") {
@@ -54,6 +64,12 @@ export function useShortcuts() {
         }
         s.select([]);
         s.setTool("select");
+        return;
+      }
+
+      if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight") && s.doc?.campaignId) {
+        e.preventDefault();
+        s.nudgeCampaignPage(s.doc.id, e.key === "ArrowLeft" ? -1 : 1);
         return;
       }
 
@@ -79,6 +95,22 @@ export function useShortcuts() {
       if (meta && e.key.toLowerCase() === "a") {
         e.preventDefault();
         s.selectAll();
+        return;
+      }
+      if (meta && e.key.toLowerCase() === "u") {
+        e.preventDefault();
+        applyBoolean(e.shiftKey ? "subtract" : "union");
+        return;
+      }
+      if (meta && e.key.toLowerCase() === "i") {
+        e.preventDefault();
+        applyBoolean(e.shiftKey ? "exclude" : "intersect");
+        return;
+      }
+      if (meta && e.key.toLowerCase() === "g") {
+        e.preventDefault();
+        if (e.shiftKey) s.ungroupSelection();
+        else s.groupSelection();
         return;
       }
       if (meta && e.key.toLowerCase() === "c") {
@@ -115,15 +147,29 @@ export function useShortcuts() {
         return;
       }
 
+      if ((e.key === "Alt" || e.code === "AltLeft" || e.code === "AltRight") && s.tool === "pen" && !meta) {
+        if (cornerLastPenPoint()) {
+          e.preventDefault();
+        }
+        return;
+      }
+
+      if (e.shiftKey && e.key.toLowerCase() === "s" && !meta) {
+        e.preventDefault();
+        smoothSelectedPath();
+        return;
+      }
+
       if (e.shiftKey && e.code === "KeyP" && !meta) {
         e.preventDefault();
         s.togglePresent();
         return;
       }
 
-      if (e.key === "0") {
+      if (e.code === "Digit0" || e.key === "0" || e.key === ")") {
         e.preventDefault();
-        s.requestFit();
+        if (e.shiftKey) requestFitSelection();
+        else s.requestFit();
         return;
       }
       if (e.key === "1" && !meta) {
@@ -146,7 +192,7 @@ export function useShortcuts() {
         s.requestZoom(s.viewport.zoom / 1.15);
         return;
       }
-      if (e.key === "[" ) {
+      if (e.key === "[") {
         s.setBrush({ size: Math.max(2, s.brush.size - 4) });
         return;
       }
@@ -155,22 +201,43 @@ export function useShortcuts() {
         return;
       }
 
-      const nudge = e.shiftKey ? 10 : 1;
-      if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        s.translateSelected(-nudge, 0);
+      if (!meta && s.pathEditHit?.hole != null && (e.key === "Home" || e.key === "End")) {
+        const toEnd = e.key === "End";
+        if (e.shiftKey) {
+          jumpPathHolePoint(toEnd);
+          e.preventDefault();
+          return;
+        }
+        if (jumpPathHole(toEnd)) {
+          e.preventDefault();
+          return;
+        }
       }
-      if (e.key === "ArrowRight") {
+
+      const nudge = e.altKey ? 0.5 : e.shiftKey ? 10 : 1;
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown") {
+        if (
+          !meta &&
+          (e.key === "ArrowUp" || e.key === "ArrowDown") &&
+          s.pathEditHit?.hole != null &&
+          stepPathHole(e.key === "ArrowDown" ? 1 : -1)
+        ) {
+          e.preventDefault();
+          return;
+        }
+        if (
+          !meta &&
+          (e.key === "ArrowLeft" || e.key === "ArrowRight") &&
+          s.pathEditHit?.hole != null &&
+          stepPathHolePoint(e.key === "ArrowRight" ? 1 : -1)
+        ) {
+          e.preventDefault();
+          return;
+        }
         e.preventDefault();
-        s.translateSelected(nudge, 0);
-      }
-      if (e.key === "ArrowUp") {
-        e.preventDefault();
-        s.translateSelected(0, -nudge);
-      }
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        s.translateSelected(0, nudge);
+        const dx = e.key === "ArrowLeft" ? -nudge : e.key === "ArrowRight" ? nudge : 0;
+        const dy = e.key === "ArrowUp" ? -nudge : e.key === "ArrowDown" ? nudge : 0;
+        useDesign.getState().translateSelected(dx, dy);
       }
       if (meta) return;
       const tool = KEYS[e.key.toLowerCase()];

@@ -3,6 +3,8 @@ import type { BrandColor, BrandKit, DesignDocument, ProjectMeta } from "./types"
 const DOCS_KEY = "voice-design:docs:v1";
 const BRAND_KEY = "voice-design:brand:v1";
 const INDEX_KEY = "voice-design:index:v1";
+const LAST_OPENED_KEY = "voice-design:last-opened:v1";
+const STAY_HUB_KEY = "voice-design:stay-hub";
 
 function readJson<T>(key: string, fallback: T): T {
   if (typeof localStorage === "undefined") return fallback;
@@ -66,9 +68,22 @@ export function saveDoc(doc: DesignDocument) {
     pinned: prev?.pinned,
     folder: prev?.folder,
     tags: prev?.tags,
-    campaignId: doc.campaignId ?? prev?.campaignId,
+    campaignId: doc.campaignId,
+    campaignOrder: prev?.campaignOrder,
   });
   saveIndex(index.slice(0, 40));
+}
+
+/** Persist explicit strip positions for every remaining page in a set. */
+export function writeCampaignOrder(campaignId: string, ids: string[]) {
+  const index = loadIndex().map((p) => {
+    if (p.campaignId !== campaignId) return p;
+    const i = ids.indexOf(p.id);
+    if (i < 0) return { ...p, campaignId: undefined, campaignOrder: undefined };
+    return { ...p, campaignOrder: i };
+  });
+  saveIndex(index);
+  return loadIndex();
 }
 
 export function patchIndex(id: string, patch: Partial<ProjectMeta>) {
@@ -82,6 +97,62 @@ export function deleteDoc(id: string) {
   delete all[id];
   localStorage.setItem(DOCS_KEY, JSON.stringify(all));
   saveIndex(loadIndex().filter((p) => p.id !== id));
+  if (loadLastOpenedId() === id) clearLastOpenedId();
+}
+
+export function loadLastOpenedId(): string | null {
+  if (typeof localStorage === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(LAST_OPENED_KEY);
+    return raw && raw.length > 0 ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+export function saveLastOpenedId(id: string) {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.setItem(LAST_OPENED_KEY, id);
+  } catch {
+    /* quota */
+  }
+}
+
+export function clearLastOpenedId() {
+  if (typeof localStorage === "undefined") return;
+  try {
+    localStorage.removeItem(LAST_OPENED_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Explicit hub visit this tab — do not bounce back to the last artboard. */
+export function markStayOnHub() {
+  if (typeof sessionStorage === "undefined") return;
+  try {
+    sessionStorage.setItem(STAY_HUB_KEY, "1");
+  } catch {
+    /* ignore */
+  }
+}
+
+export function shouldStayOnHub(): boolean {
+  if (typeof sessionStorage === "undefined") return false;
+  try {
+    return sessionStorage.getItem(STAY_HUB_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** Resume last artboard when landing on the hub in a fresh tab. */
+export function lastOpenedToResume(): string | null {
+  if (shouldStayOnHub()) return null;
+  const id = loadLastOpenedId();
+  if (!id) return null;
+  return loadDoc(id) ? id : null;
 }
 
 export const DEFAULT_BRAND: BrandKit = {

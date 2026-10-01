@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { FORMATS } from "@/lib/design/formats";
 import { useDesign } from "@/lib/design/store";
@@ -17,10 +17,12 @@ export function PresentChipRail({
   pages,
   liveId,
   onGo,
+  onMenuOpenChange,
 }: {
   pages: Page[];
   liveId: string;
   onGo: (id: string) => void;
+  onMenuOpenChange?: (open: boolean) => void;
 }) {
   const navigate = useNavigate();
   const save = useDesign((s) => s.save);
@@ -36,6 +38,10 @@ export function PresentChipRail({
   const [draft, setDraft] = useState("");
   const [dragging, setDragging] = useState<string | null>(null);
   const [overId, setOverId] = useState<string | null>(null);
+
+  useEffect(() => {
+    onMenuOpenChange?.(Boolean(menuId || renaming));
+  }, [menuId, renaming, onMenuOpenChange]);
 
   function moveChip(fromId: string, toId: string) {
     if (!fromId || !toId || fromId === toId) return;
@@ -84,9 +90,9 @@ export function PresentChipRail({
               tabIndex={0}
               draggable
               className={cn(
-                "h-2.5 w-2.5 cursor-grab rounded-full border transition-colors active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-phosphor focus-visible:ring-offset-2 focus-visible:ring-offset-ground",
+                "h-2.5 w-2.5 cursor-grab rounded-full border transition-colors active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-phosphor focus-visible:ring-offset-1 focus-visible:ring-offset-ground",
                 p.id === liveId
-                  ? "border-phosphor bg-phosphor"
+                  ? "border-phosphor bg-phosphor ring-2 ring-phosphor ring-offset-2 ring-offset-ground shadow-[0_0_10px_rgba(63,198,255,0.55)]"
                   : "border-ink-faint bg-transparent hover:border-phosphor hover:bg-phosphor/40",
                 dragging === p.id && "opacity-40",
                 overId === p.id && dragging && dragging !== p.id && "ring-2 ring-phosphor ring-offset-1 ring-offset-ground",

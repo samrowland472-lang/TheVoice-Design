@@ -69,12 +69,76 @@ export function snapshotScroll(from: Element | null | undefined, to: Element | n
 
 export function restoreListScroll(list: Element | null | undefined, saved: number) {
   if (!(list instanceof HTMLElement)) return;
-  list.scrollTop = saved;
+  restoreHoleListScroll(list, saved);
+  const apply = () => restoreHoleListScroll(list, saved);
   if (typeof requestAnimationFrame === "function") {
     requestAnimationFrame(() => {
-      list.scrollTop = saved;
+      apply();
+      requestAnimationFrame(apply);
     });
   }
+}
+
+/** Snapshot Points or Holes from a path inspector hop. */
+export function snapshotList(from: Element, elOrSel: HTMLElement | string | null, sel?: string) {
+  const selector = typeof elOrSel === "string" ? elOrSel : (sel ?? "");
+  const el = typeof elOrSel === "string" ? null : elOrSel;
+  const root = from.closest("[data-path-inspector]") ?? from;
+  const preferred =
+    selector === "[data-hole-list]"
+      ? (el?.closest("[data-hole-list]") ?? from.closest("[data-hole-list]") ?? root.querySelector("[data-hole-list]"))
+      : selector === "[data-point-list]"
+        ? (el?.closest("[data-point-list]") ?? from.closest("[data-point-list]") ?? root.querySelector("[data-point-list]"))
+        : (el?.closest(selector) ?? from.closest(selector) ?? root.querySelector(selector));
+  const list = preferred as HTMLElement | null;
+  return { list, saved: list instanceof HTMLElement ? list.scrollTop : 0 };
+}
+
+/** Assign saved scroll, restoreListScroll(list, saved), then clampAfterGrowth. */
+export function holdListScroll(list: Element | null | undefined, saved: number) {
+  if (!(list instanceof HTMLElement)) return;
+  list.scrollTop = saved;
+  restoreListScroll(list, saved);
+  const clampAfterGrowth = () => restoreHoleListScroll(list, saved);
+  if (typeof requestAnimationFrame !== "function") {
+    clampAfterGrowth();
+    return;
+  }
+  requestAnimationFrame(() => {
+    clampAfterGrowth();
+    requestAnimationFrame(() => {
+      clampAfterGrowth();
+      requestAnimationFrame(clampAfterGrowth);
+    });
+  });
+}
+
+/** Snapshot Points + Holes, focus without scroll, then clamp-after-growth. */
+export function focusHoldEl(el: HTMLElement, from: Element) {
+  const points = snapshotList(from, el, "[data-point-list]");
+  const holes = snapshotList(from, el, "[data-hole-list]");
+  el.focus({ preventScroll: true });
+  if (el instanceof HTMLInputElement) el.select();
+  holdListScroll(points.list, points.saved);
+  holdListScroll(holes.list, holes.saved);
+}
+
+/** Same as focusHoldEl, plus a primary list (point or hole) held first. */
+export function focusHold(el: HTMLElement, sel: string, from: Element) {
+  const points = snapshotList(from, el, "[data-point-list]");
+  const holes = snapshotList(from, el, "[data-hole-list]");
+  const primary = snapshotList(from, el, sel);
+  el.focus({ preventScroll: true });
+  if (el instanceof HTMLInputElement) el.select();
+  holdListScroll(primary.list, primary.saved);
+  if (sel !== "[data-point-list]") holdListScroll(points.list, points.saved);
+  if (sel !== "[data-hole-list]") holdListScroll(holes.list, holes.saved);
+}
+
+export function holdExitHop(from: Element, target: HTMLElement, list: Element | null) {
+  const saved = list instanceof HTMLElement ? list.scrollTop : 0;
+  target.focus({ preventScroll: true });
+  holdListScroll(list, saved);
 }
 
 export function holdPointAndHoleLists(from: Element | null | undefined, to: Element | null | undefined) {
@@ -129,5 +193,6 @@ export function tagHolePointTabCrossing(
   row.setAttribute("data-hole-point", "");
   if (fromPoint && toHeader) holdPointAndHoleLists(from, to);
   if (fromHeader && toPoint) holdPointAndHoleLists(from, to);
+  if (fromPoint && toPoint && fromPoint !== toPoint) holdPointAndHoleLists(from, to);
   return true;
 }

@@ -19,3 +19,14 @@ test("Tab from last hole-path x hops to next hole first-point x", () => {
   const xBlock = ui.split('data-path-axis="x"')[1] ?? "";
   assert.match(xBlock, /focusNextHoleFirstX/);
 });
+
+test("last-hole x to next first x holds Points and Holes list scroll after growth", () => {
+  assert.match(b, /fromPoint && toPoint && fromPoint !== toPoint\) holdPointAndHoleLists/);
+  assert.match(b, /snapshotScroll\(from, to, "\[data-point-list\]"\)/);
+  assert.match(b, /snapshotScroll\(from, to, "\[data-hole-list\]"\)/);
+  assert.match(ui, /function focusNextHoleFirstX/);
+  assert.match(ui, /focus\(\{ preventScroll: true \}\)/);
+  const xBlock = ui.split('data-path-axis="x"')[1] ?? "";
+  assert.match(xBlock, /focusNextHoleFirstX/);
+  assert.match(ui, /requestAnimationFrame\(\(\) => \{\s*list\.scrollTop = saved;\s*requestAnimationFrame/);
+});

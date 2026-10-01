@@ -1,16 +1,24 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Download, Grid3x3, Maximize2, Redo2, Ruler, Save, Scan, Search, Undo2 } from "lucide-react";
+import { ArrowLeft, Crop, Download, Grid3x3, Maximize2, Redo2, Ruler, Save, Scan, Search, Undo2 } from "lucide-react";
 import { toast } from "sonner";
+import { campaignDocsFromIndex, downloadCampaignPdf, downloadCampaignSvg } from "@/lib/design/export-campaign";
 import { downloadDataUrl, downloadPrintPdf, downloadSvg, exportJpeg, exportPng, exportPrintPng, slug } from "@/lib/design/export";
-import { cropSelectionDocument, selectionDocument } from "@/lib/design/selection-document";
+import {
+  cropIsolateDocument,
+  cropSelectionDocument,
+  isolateDocument,
+  selectionDocument,
+} from "@/lib/design/selection-document";
 import { FORMATS } from "@/lib/design/formats";
+import { markStayOnHub } from "@/lib/design/persist";
 import { useDesign } from "@/lib/design/store";
 import { Button } from "@/components/ui/button";
 
 export function TopBar() {
   const navigate = useNavigate();
   const doc = useDesign((s) => s.doc);
+  const index = useDesign((s) => s.index);
   const dirty = useDesign((s) => s.dirty);
   const save = useDesign((s) => s.save);
   const undo = useDesign((s) => s.undo);
@@ -23,34 +31,74 @@ export function TopBar() {
   const rulers = useDesign((s) => s.rulers);
   const toggleSafeArea = useDesign((s) => s.toggleSafeArea);
   const safeArea = useDesign((s) => s.safeArea);
+  const togglePrintMarks = useDesign((s) => s.togglePrintMarks);
+  const printMarks = useDesign((s) => s.printMarks);
   const zoom = useDesign((s) => s.viewport.zoom);
   const togglePresent = useDesign((s) => s.togglePresent);
   const setPaletteOpen = useDesign((s) => s.setPaletteOpen);
   const selection = useDesign((s) => s.selection);
+  const isolateSnapshot = useDesign((s) => s.isolateSnapshot);
   const [scale, setScale] = useState(2);
   const [exportOpen, setExportOpen] = useState(false);
 
   if (!doc) return null;
 
-  function exportFile(kind: "png" | "jpg" | "svg" | "print" | "pdf" | "sel-png" | "sel-svg" | "crop-png" | "crop-svg") {
+  function exportFile(
+    kind:
+      | "png"
+      | "jpg"
+      | "svg"
+      | "print"
+      | "pdf"
+      | "campaign-svg"
+      | "campaign-pdf"
+      | "sel-png"
+      | "sel-svg"
+      | "crop-png"
+      | "crop-svg"
+      | "iso-png"
+      | "iso-svg"
+      | "iso-crop-png"
+      | "iso-crop-svg",
+  ) {
     if (!doc) return;
     save();
-    if (kind === "sel-png" || kind === "sel-svg" || kind === "crop-png" || kind === "crop-svg") {
+    const campaign = campaignDocsFromIndex(index, doc);
+    if (
+      kind === "sel-png" ||
+      kind === "sel-svg" ||
+      kind === "crop-png" ||
+      kind === "crop-svg" ||
+      kind === "iso-png" ||
+      kind === "iso-svg" ||
+      kind === "iso-crop-png" ||
+      kind === "iso-crop-svg"
+    ) {
       const slice =
-        kind === "crop-png" || kind === "crop-svg"
-          ? cropSelectionDocument(doc, selection)
-          : selectionDocument(doc, selection);
+        kind === "iso-crop-png" || kind === "iso-crop-svg"
+          ? cropIsolateDocument(doc)
+          : kind === "iso-png" || kind === "iso-svg"
+            ? isolateDocument(doc)
+            : kind === "crop-png" || kind === "crop-svg"
+              ? cropSelectionDocument(doc, selection)
+              : selectionDocument(doc, selection);
       if (!slice) {
-        toast.error("Select a layer first");
+        toast.error(kind.startsWith("iso") ? "Isolate a layer first" : "Select a layer first");
         return;
       }
-      if (kind === "sel-svg" || kind === "crop-svg") downloadSvg(slice);
+      if (kind.endsWith("svg")) downloadSvg(slice);
       else downloadDataUrl(exportPng(slice, scale), `${slug(slice.name)}.png`);
-      const cropped = kind.startsWith("crop");
+      const label = kind.startsWith("iso-crop")
+        ? "isolate crop"
+        : kind.startsWith("iso")
+          ? "isolate"
+          : kind.startsWith("crop")
+            ? "crop"
+            : "selection";
       toast.success(
         kind.endsWith("svg")
-          ? `Exported ${cropped ? "crop" : "selection"} SVG`
-          : `Exported ${cropped ? "crop" : "selection"} PNG @${scale}× · ${slice.artboard.width}×${slice.artboard.height}`,
+          ? `Exported ${label} SVG · ${slice.nodes.length} layer${slice.nodes.length === 1 ? "" : "s"}`
+          : `Exported ${label} PNG @${scale}× · ${slice.artboard.width}×${slice.artboard.height}`,
       );
       setExportOpen(false);
       return;
@@ -63,18 +111,38 @@ export function TopBar() {
       downloadDataUrl(exportPrintPng(doc), `${slug(doc.name)}-print.png`);
     } else if (kind === "pdf") {
       downloadPrintPdf(doc);
+    } else if (kind === "campaign-svg") {
+      downloadCampaignSvg(campaign, doc.name);
+    } else if (kind === "campaign-pdf") {
+      downloadCampaignPdf(campaign, doc.name, scale);
     } else {
       downloadDataUrl(exportPng(doc, scale), `${slug(doc.name)}.png`);
     }
     toast.success(
-      kind === "pdf" ? "Exported print PDF" : kind === "print" ? "Exported print PNG @4×" : `Exported ${kind.toUpperCase()}${kind === "svg" ? "" : ` @${scale}×`}`,
+      kind === "campaign-pdf"
+        ? `Exported campaign PDF · ${campaign.length} boards`
+        : kind === "campaign-svg"
+          ? `Exported campaign SVG · ${campaign.length} boards`
+          : kind === "pdf"
+            ? "Exported print PDF"
+            : kind === "print"
+              ? "Exported print PNG @4×"
+              : `Exported ${kind.toUpperCase()}${kind === "svg" ? "" : ` @${scale}×`}`,
     );
     setExportOpen(false);
   }
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-1 border-b border-border px-2 md:gap-2 md:px-3">
-      <Button variant="ghost" size="icon-sm" onClick={() => void navigate({ to: "/" })} aria-label="Back">
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        onClick={() => {
+          markStayOnHub();
+          void navigate({ to: "/" });
+        }}
+        aria-label="Back"
+      >
         <ArrowLeft className="size-4" />
       </Button>
       <input
@@ -108,6 +176,9 @@ export function TopBar() {
         </Button>
         <Button variant="ghost" size="icon-sm" onClick={toggleSafeArea} aria-label="Toggle safe area" aria-pressed={safeArea}>
           <Scan className="size-4" />
+        </Button>
+        <Button variant="ghost" size="icon-sm" onClick={togglePrintMarks} aria-label="Toggle print marks" aria-pressed={printMarks}>
+          <Crop className="size-4" />
         </Button>
         <Button variant="ghost" size="icon-sm" onClick={togglePresent} aria-label="Present">
           <Maximize2 className="size-4" />
@@ -148,17 +219,69 @@ export function TopBar() {
             <Button size="sm" className="mb-1 w-full" onClick={() => exportFile("svg")}>
               SVG
             </Button>
-            <Button size="sm" className="mb-1 w-full" disabled={selection.length === 0} onClick={() => exportFile("sel-png")}>
+            <Button
+              size="sm"
+              className="mb-1 w-full"
+              disabled={selection.length === 0}
+              onClick={() => exportFile("sel-png")}
+            >
               Selection PNG
             </Button>
-            <Button size="sm" className="mb-1 w-full" disabled={selection.length === 0} onClick={() => exportFile("sel-svg")}>
+            <Button
+              size="sm"
+              className="mb-1 w-full"
+              disabled={selection.length === 0}
+              onClick={() => exportFile("sel-svg")}
+            >
               Selection SVG
             </Button>
-            <Button size="sm" className="mb-1 w-full" disabled={selection.length === 0} onClick={() => exportFile("crop-png")}>
+            <Button
+              size="sm"
+              className="mb-1 w-full"
+              disabled={selection.length === 0}
+              onClick={() => exportFile("crop-png")}
+            >
               Crop PNG
             </Button>
-            <Button size="sm" className="mb-1 w-full" disabled={selection.length === 0} onClick={() => exportFile("crop-svg")}>
+            <Button
+              size="sm"
+              className="mb-1 w-full"
+              disabled={selection.length === 0}
+              onClick={() => exportFile("crop-svg")}
+            >
               Crop SVG
+            </Button>
+            <Button
+              size="sm"
+              className="mb-1 w-full"
+              disabled={!isolateSnapshot}
+              onClick={() => exportFile("iso-png")}
+            >
+              Isolate PNG
+            </Button>
+            <Button
+              size="sm"
+              className="mb-1 w-full"
+              disabled={!isolateSnapshot}
+              onClick={() => exportFile("iso-svg")}
+            >
+              Isolate SVG
+            </Button>
+            <Button
+              size="sm"
+              className="mb-1 w-full"
+              disabled={!isolateSnapshot}
+              onClick={() => exportFile("iso-crop-png")}
+            >
+              Isolate crop PNG
+            </Button>
+            <Button
+              size="sm"
+              className="mb-1 w-full"
+              disabled={!isolateSnapshot}
+              onClick={() => exportFile("iso-crop-svg")}
+            >
+              Isolate crop SVG
             </Button>
             <Button size="sm" className="mb-1 w-full" variant="primary" onClick={() => exportFile("print")}>
               Print PNG
@@ -166,6 +289,16 @@ export function TopBar() {
             <Button size="sm" className="w-full" variant="primary" onClick={() => exportFile("pdf")}>
               Print PDF
             </Button>
+            {doc.campaignId && (
+              <>
+                <Button size="sm" className="mt-1 w-full" onClick={() => exportFile("campaign-svg")}>
+                  Campaign SVG
+                </Button>
+                <Button size="sm" className="mt-1 w-full" variant="primary" onClick={() => exportFile("campaign-pdf")}>
+                  Campaign PDF
+                </Button>
+              </>
+            )}
           </div>
         )}
       </div>

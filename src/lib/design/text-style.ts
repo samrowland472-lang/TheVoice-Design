@@ -1,4 +1,4 @@
-import { clampAxis, faceAxis } from "./fonts";
+import { clampAxis, faceAxis, type FontAxisTag } from "./fonts";
 import type { Align, TextNode } from "./types";
 
 export type TypeStyle = {
@@ -11,6 +11,10 @@ export type TypeStyle = {
   uppercase: boolean;
   opticalSize?: number;
   fontWidth?: number;
+  fontSlant?: number;
+  fontItalic?: number;
+  fontGrade?: number;
+  fontSoft?: number;
 };
 
 export const DEFAULT_TYPE: TypeStyle = {
@@ -34,6 +38,10 @@ export function normalizeType(node: Pick<TextNode, keyof TypeStyle> | TypeStyle)
     uppercase: Boolean(node.uppercase),
     opticalSize: node.opticalSize,
     fontWidth: node.fontWidth,
+    fontSlant: node.fontSlant,
+    fontItalic: node.fontItalic,
+    fontGrade: node.fontGrade,
+    fontSoft: node.fontSoft,
   };
 }
 
@@ -53,6 +61,10 @@ export function typeKey(node: Pick<TextNode, keyof TypeStyle> | TypeStyle): stri
     t.uppercase ? "1" : "0",
     t.opticalSize == null ? "auto" : String(Math.round(t.opticalSize * 10) / 10),
     t.fontWidth == null ? "auto" : String(Math.round(t.fontWidth * 10) / 10),
+    t.fontSlant == null ? "auto" : String(Math.round(t.fontSlant * 10) / 10),
+    t.fontItalic == null ? "auto" : String(Math.round(t.fontItalic * 100) / 100),
+    t.fontGrade == null ? "auto" : String(Math.round(t.fontGrade * 10) / 10),
+    t.fontSoft == null ? "auto" : String(Math.round(t.fontSoft * 10) / 10),
   ].join(":");
 }
 
@@ -60,21 +72,36 @@ function formatChipNum(n: number) {
   return Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10);
 }
 
-function axisToken(node: TypeStyle, tag: "opsz" | "wdth"): string | null {
+function axisToken(node: TypeStyle, tag: FontAxisTag): string | null {
   const axis = faceAxis(node.fontFamily, tag);
   if (!axis) return null;
   if (tag === "opsz") {
     if (node.opticalSize == null) return "auto";
     return formatChipNum(clampAxis(axis, node.opticalSize, node.fontSize));
   }
-  if (node.fontWidth == null) return "auto";
-  return formatChipNum(clampAxis(axis, node.fontWidth));
+  if (tag === "wdth") {
+    if (node.fontWidth == null) return "auto";
+    return formatChipNum(clampAxis(axis, node.fontWidth));
+  }
+  if (tag === "slnt") {
+    if (node.fontSlant == null) return "auto";
+    return formatChipNum(clampAxis(axis, node.fontSlant));
+  }
+  if (tag === "ital") {
+    if (node.fontItalic == null) return "auto";
+    return formatChipNum(clampAxis(axis, node.fontItalic));
+  }
+  if (tag === "GRAD") {
+    if (node.fontGrade == null) return "auto";
+    return formatChipNum(clampAxis(axis, node.fontGrade));
+  }
+  if (node.fontSoft == null) return "auto";
+  return formatChipNum(clampAxis(axis, node.fontSoft));
 }
 
-/** True when supporting faces in the set do not share one opsz or wdth token. */
 export function typeAxesDiffer(
   nodes: Array<Pick<TextNode, keyof TypeStyle> | TypeStyle>,
-  tag: "opsz" | "wdth",
+  tag: FontAxisTag,
 ): boolean {
   const tokens = new Set<string>();
   for (const raw of nodes) {
@@ -101,7 +128,23 @@ export function typeChipLabel(
     const token = axisToken(t, "wdth");
     if (token) parts.push(token === "auto" ? "wdth auto" : `wdth ${token}`);
   }
-  return parts.join(" · ");
+  if (typeAxesDiffer(group, "slnt")) {
+    const token = axisToken(t, "slnt");
+    if (token) parts.push(token === "auto" ? "slnt auto" : `slnt ${token}`);
+  }
+  if (typeAxesDiffer(group, "ital")) {
+    const token = axisToken(t, "ital");
+    if (token) parts.push(token === "auto" ? "ital auto" : `ital ${token}`);
+  }
+  if (typeAxesDiffer(group, "GRAD")) {
+    const token = axisToken(t, "GRAD");
+    if (token) parts.push(token === "auto" ? "GRAD auto" : `GRAD ${token}`);
+  }
+  if (typeAxesDiffer(group, "SOFT")) {
+    const token = axisToken(t, "SOFT");
+    if (token) parts.push(token === "auto" ? "SOFT auto" : `SOFT ${token}`);
+  }
+  return parts.join(" \u00b7 ");
 }
 
 export function clampTypeSize(n: number): number {
@@ -109,7 +152,6 @@ export function clampTypeSize(n: number): number {
   return Math.min(400, Math.max(6, n));
 }
 
-/** Scale every layer's size from the key so mixed stacks keep their steps. */
 export function scaledTypeSizes(
   nodes: Pick<TextNode, "id" | "fontSize">[],
   keyId: string,

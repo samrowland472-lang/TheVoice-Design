@@ -45,6 +45,7 @@ export function peekCaptionAfterLeaveOffCurrentNamedTick(opts: {
   };
 }
 
+/** Window blur mid-scrub after keep-clear shares this helper so the current-dot name stays live. */
 export function applyWindowBlur(opts: { scrubbing: boolean }) {
   return { endScrub: opts.scrubbing, nameCurrentDot: true };
 }
@@ -72,6 +73,7 @@ export function peekCaptionAfterLostCaptureCurrentHover(opts: {
   });
 }
 
+/** Quiet Escape after window-blur keep-clear must not revive mutedPointerUpKeep. */
 export function peekCaptionAfterQuietEscapeAfterKeepClear(opts: {
   key: string;
   shiftHeld: boolean;
@@ -97,6 +99,7 @@ export function peekCaptionAfterQuietEscapeAfterKeepClear(opts: {
   };
 }
 
+/** Quiet Escape after keep-clear while Shift is held stays in present; keep stays dead. */
 export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeld(opts: {
   key: string;
   muted: boolean;
@@ -123,6 +126,7 @@ export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeld(opts: {
   };
 }
 
+/** Later current-dot hover after that quiet Escape names the live frame; keep stays dead. */
 export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldCurrentHover(opts: {
   key: string;
   muted: boolean;
@@ -172,6 +176,7 @@ type KeepClearReleaseResult = {
   mutedPointerUpKeep: boolean;
 };
 
+/** Shift-release after that quiet Escape stays muted until an off-current tick is named. */
 export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftRelease(
   opts: KeepClearReleaseOpts,
 ): KeepClearReleaseResult {
@@ -240,8 +245,100 @@ export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleasePo
   return peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleasePointerOut(opts);
 }
 
+/** Document pointer-over after the muted keep-clear Shift-held path stays muted. */
 export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleasePointerOver(
   opts: KeepClearReleaseOpts,
 ): KeepClearReleaseResult {
   return peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleasePointerEnter(opts);
+}
+
+/** Document pointer-move after the muted keep-clear Shift-held path stays muted. */
+export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleasePointerMove(
+  opts: KeepClearReleaseOpts,
+): KeepClearReleaseResult {
+  return peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleasePointerOver(opts);
+}
+
+/** Document pointer-down after the muted keep-clear Shift-held path stays muted. */
+export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleasePointerDown(
+  opts: KeepClearReleaseOpts,
+): KeepClearReleaseResult {
+  return peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleasePointerMove(opts);
+}
+
+/** Document pointer-cancel after the muted keep-clear Shift-held pointer-down path stays muted. */
+export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleaseDocPointerCancel(
+  opts: KeepClearReleaseOpts,
+): KeepClearReleaseResult {
+  return peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleasePointerDown(opts);
+}
+
+/** Document lostpointercapture after the muted keep-clear Shift-held path stays muted. */
+export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleaseDocLostPointerCapture(
+  opts: KeepClearReleaseOpts,
+): KeepClearReleaseResult {
+  return peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleaseDocPointerCancel(opts);
+}
+
+/** Document pointer-up after the muted keep-clear Shift-held path stays muted. */
+export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleaseDocPointerUp(
+  opts: KeepClearReleaseOpts,
+): KeepClearReleaseResult {
+  return peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleaseDocLostPointerCapture(opts);
+}
+
+/** Second document pointer-up after the muted lostpointercapture path stays muted. */
+export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleaseDocSecondPointerUp(
+  opts: KeepClearReleaseOpts,
+): KeepClearReleaseResult {
+  return peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleaseDocLostPointerCapture(opts);
+}
+
+/** Second document pointer-down after that muted path stays muted. */
+export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleaseDocPointerDown(
+  opts: KeepClearReleaseOpts,
+): KeepClearReleaseResult {
+  return peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleaseDocPointerUp(opts);
+}
+
+/** Second document pointer-move after the muted document pointer-down path stays muted. */
+export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleaseDocPointerMove(
+  opts: KeepClearReleaseOpts,
+): KeepClearReleaseResult {
+  return peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleaseDocPointerDown(opts);
+}
+
+/** Second document pointer-leave after the muted document pointer-move path stays muted. */
+export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleaseDocPointerLeave(
+  opts: KeepClearReleaseOpts,
+): KeepClearReleaseResult {
+  return peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleaseDocPointerMove(opts);
+}
+
+/** Second document pointer-out after the muted document pointer-leave path stays muted. */
+export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleaseDocPointerOut(
+  opts: KeepClearReleaseOpts,
+): KeepClearReleaseResult {
+  return peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleaseDocPointerLeave(opts);
+}
+
+/** Second document pointer-enter after the muted document pointer-out path stays muted. */
+export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleaseDocPointerEnter(
+  opts: KeepClearReleaseOpts,
+): KeepClearReleaseResult {
+  return peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleaseDocPointerOut(opts);
+}
+
+/** Second document pointer-over after the muted document pointer-enter path stays muted. */
+export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleaseDocPointerOver(
+  opts: KeepClearReleaseOpts,
+): KeepClearReleaseResult {
+  return peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleaseDocPointerEnter(opts);
+}
+
+/** Second document pointer-cancel after the muted second document pointer-up path stays muted. */
+export function peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleaseDocSecondPointerCancel(
+  opts: KeepClearReleaseOpts,
+): KeepClearReleaseResult {
+  return peekCaptionAfterQuietEscapeAfterKeepClearShiftHeldShiftReleaseDocSecondPointerUp(opts);
 }
