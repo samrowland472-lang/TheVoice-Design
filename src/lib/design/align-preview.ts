@@ -1307,6 +1307,7 @@ function slideSwappedCountAlongBlockedEdge(
  * When that fifteenth extra step still covers the lead because the lead is wider than that step, step one more caption-width off the edge into the next gap beside the lead.
  * When that sixteenth extra step still covers the lead because the lead is wider than that step, step one more caption-width off the edge into the next gap beside the lead.
  * When that seventeenth extra step still covers the lead because the lead is wider than that step, step one more caption-width off the edge into the next gap beside the lead.
+ * When that eighteenth extra step still covers the lead because the lead is wider than that step, step one more caption-width off the edge into the next gap beside the lead.
  * Prefer the seat just beside the lead closest to the count; if that seat still covers the lead, use the other side of the lead, then the crop ends.
  * Keeps the stamp alpha. The status strip still reads the unwrapped release line. Esc still clears it early.
  */
@@ -1384,7 +1385,10 @@ function dropSwappedCountOffSharedLeadSpan(
   const steppedSixteenth = stepCountSixteenthCaptionWidthOffEdgeBesideLead(zoom, crop, lead, steppedFifteenth);
   if (!coversLead(steppedSixteenth)) return steppedSixteenth;
   const steppedSeventeenth = stepCountSeventeenthCaptionWidthOffEdgeBesideLead(zoom, crop, lead, steppedSixteenth);
-  if (Math.abs(steppedSeventeenth.x - steppedSixteenth.x) > 0.01 || !coversLead(steppedSeventeenth)) return steppedSeventeenth;
+  if (!coversLead(steppedSeventeenth)) return steppedSeventeenth;
+  const steppedEighteenth = stepCountEighteenthCaptionWidthOffEdgeBesideLead(zoom, crop, lead, steppedSeventeenth);
+  if (Math.abs(steppedEighteenth.x - steppedSeventeenth.x) > 0.01 || !coversLead(steppedEighteenth)) return steppedEighteenth;
+  if (Math.abs(steppedSeventeenth.x - steppedSixteenth.x) > 0.01) return steppedSeventeenth;
   if (Math.abs(steppedSixteenth.x - steppedFifteenth.x) > 0.01) return steppedSixteenth;
   if (Math.abs(steppedFifteenth.x - steppedFourteenth.x) > 0.01) return steppedFifteenth;
   if (Math.abs(steppedFourteenth.x - steppedThirteenth.x) > 0.01) return steppedFourteenth;
@@ -1688,6 +1692,19 @@ function stepCountSixteenthCaptionWidthOffEdgeBesideLead(
  * Prefer the seat just beside the lead closest to the count; if that seat still covers the lead, use the other side of the lead, then the crop ends. Stamp alpha unchanged. The status strip still reads the unwrapped release line. Esc still clears it early.
  */
 function stepCountSeventeenthCaptionWidthOffEdgeBesideLead(
+  zoom: number,
+  crop: AlignViewCrop,
+  lead: { x: number; y: number; w: number; h: number },
+  count: { x: number; y: number; w: number; h: number; text: string },
+): { x: number; y: number; w: number; h: number; text: string } {
+  return stepCountOneMoreCaptionWidthOffEdgeBesideLead(zoom, crop, lead, count);
+}
+
+/**
+ * Eighteenth caption-width step, when the seventeenth extra step still covers the lead because the lead is wider than that step, steps one more caption-width off the edge into the next gap beside the lead.
+ * Prefer the seat just beside the lead closest to the count; if that seat still covers the lead, use the other side of the lead, then the crop ends. Stamp alpha unchanged. The status strip still reads the unwrapped release line. Esc still clears it early.
+ */
+function stepCountEighteenthCaptionWidthOffEdgeBesideLead(
   zoom: number,
   crop: AlignViewCrop,
   lead: { x: number; y: number; w: number; h: number },
