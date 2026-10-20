@@ -1,17 +1,17 @@
 ## Iteration
 
-2026-10-20 00:03 BST — Refactored the move-count seating so a single loop steps the caption off any number of overlapping stay stamps (up to 64) instead of an unrolled chain of 47 ifs. Stamp alpha unchanged. Esc still clears it early.
+2026-10-20 08:15 BST — Collapsed the long unrolled “When that Nth caption-height/width still…” comment blocks on the move-count seating functions into concise summaries of the multi-step clearance walks. Seating behaviour unchanged. Esc still clears early.
 
 ## Done
 
-- Replaced the 47-step unrolled stamp-clear chain in stepCountOffStayStampAndCropEdgeWhenBothSidesBlockedByWideLead with a while loop that keeps stepping one caption-height off the current overlapping stay stamp until the count is clear or no further progress is possible.
-- Handles the previous forty-seventh case and any deeper stack of stay stamps without further copy-paste.
-- Earlier caption-width step preference, vertical drops, slide, and one-caption tuck remain.
+- Replaced the twelve-step stay-stamp walk descriptions in nudgeSlidCountClearOfStayStamp and slideSwappedCountAlongBlockedEdge with a short “walk up to twelve caption-height steps” summary.
+- Collapsed the giant seatWrappedCommitCaption comment (including the caption-width lead-clearance lists) into a few sentences that name the twelve-step stamp walk and the caption-width lead steps.
+- Inline loop comments and the actual for-loop implementations remain; only the JSDoc lists were shortened.
 
 ## Backlog
 
-- Consider extracting the shared stamp-overlap test into a small helper if more seating paths grow similar loops.
+- Remaining shorter unrolled fragments on later seating helpers (drop/slide/tuck paths) can be tightened the same way if desired.
 
 ## Next recommended
 
-Consider extracting the shared stamp-overlap test into a small helper if more seating paths grow similar loops.
+Tighten any remaining shorter unrolled comment fragments on the drop, slide, and tuck seating helpers.
