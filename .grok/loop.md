@@ -1,17 +1,17 @@
 ## Iteration
 
-2026-10-20 12:05 BST — Collapsed the remaining long unrolled “When that Nth caption-height/width still…” comment blocks on the drop, slide, and tuck seating helpers (dropSwappedCountOffSharedLeadSpan, stepCountOffStayStampAndCropEdgeWhenBothSidesBlockedByWideLead, and the placeAlignCommitEdgeCaption overview) into concise summaries of the multi-step clearance walks. Seating behaviour unchanged. Esc still clears early.
+2026-10-20 19:05 BST — Added centered contextual hints for the brush and eraser tools on the canvas stage. Phosphor text, no chrome. Shows drag action, [ ] resize shortcut, current size, and flow. Existing left tool chip and pen/select/knife hints unchanged.
 
 ## Done
 
-- Replaced the multi-dozen-step caption-width walk descriptions in the dropSwappedCountOffSharedLeadSpan JSDoc with a short “walk successive caption-width steps … (up to 256 steps)” summary.
-- Collapsed the forty-seven-step stay-stamp walk list in stepCountOffStayStampAndCropEdgeWhenBothSidesBlockedByWideLead into a single sentence naming the successive caption-height steps.
-- Tightened the placeAlignCommitEdgeCaption overview so it summarises the drop/slide/tuck/twelve-step stamp walk instead of unrolling every extra step.
+- Subscribed CanvasStage to brush state and rendered non-interactive absolute hints when tool is brush or eraser and not in present mode.
+- Typecheck, build, and browser-smoke all green. Screenshots confirm canvas and status text present with no console errors.
 
 ## Backlog
 
 - None remaining on the seating comment unrolls.
+- Optional: bind single-letter keys for polygon / star / arrow / image if desired.
 
 ## Next recommended
 
-Inspect the canvas stage or inspector for a small visual polish, or add a missing keyboard shortcut hint if one is missing.
+Small visual polish on the inspector or layers panel, or bind the optional single-letter tool keys.
