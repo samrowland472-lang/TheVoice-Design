@@ -4,6 +4,7 @@ import { useDesign } from "@/lib/design/store";
 import { flattenLayers, layerDropLegal, type LayerDrop } from "@/lib/design/groups";
 import { isGroup } from "@/lib/design/types";
 import { cn } from "@/lib/utils";
+import { NumField } from "./num-field";
 import {
   alignCommitLayerFadeLine,
   alignCommitSolidLead,
@@ -318,13 +319,14 @@ export function LayersPanel() {
                       <button
                         type="button"
                         className="ml-1.5 inline-block rounded-[4px] bg-surface-alt px-1 py-px font-mono text-[9px] tracking-wide text-ink-faint hover:bg-phosphor/15 hover:text-phosphor"
-                        title="Edit opacity · Alt+0–9 sets tenths"
+                        title="Edit opacity · Alt+0–9 tenths · Alt+Shift+0 full"
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
                           if (!selection.includes(n.id)) select([n.id]);
                           requestAnimationFrame(() => {
-                            const el = document.querySelector("[data-opacity-range]") as HTMLInputElement | null;
+                            const el = (document.querySelector("[data-opacity-range='inspector']") ||
+                              document.querySelector("[data-opacity-range]")) as HTMLInputElement | null;
                             el?.focus();
                           });
                         }}
@@ -450,29 +452,55 @@ function OpacityQuickStrip() {
     .filter((n): n is NonNullable<typeof n> => Boolean(n));
   if (nodes.length === 0) return null;
   const mixed = new Set(nodes.map((n) => Math.round(n.opacity * 100))).size > 1;
-  const value = mixed ? 1 : nodes[0].opacity;
-  const label = mixed ? "Mixed" : `${Math.round(value * 100)}%`;
+  const value = mixed ? nodes[nodes.length - 1].opacity : nodes[0].opacity;
   return (
     <div className="mt-2 rounded-[8px] border border-border bg-surface px-2 py-1.5">
       <div className="mb-1 flex items-center justify-between font-mono text-[10px] tracking-[0.14em] text-ink-faint uppercase">
         <span>Opacity</span>
-        <span className={mixed ? "text-phosphor" : "text-ink-dim"}>{label}</span>
+        <span className={mixed ? "text-phosphor" : "text-ink-dim"}>{mixed ? "Mixed" : `${Math.round(value * 100)}%`}</span>
       </div>
-      <input
-        type="range"
-        className="range-phosphor w-full"
-        min={0}
-        max={1}
-        step={0.01}
-        value={value}
-        aria-label="Layer opacity"
-        data-opacity-range=""
-        onChange={(e) => {
-          const next = Number(e.target.value);
-          updateNodes(selection, { opacity: next });
-        }}
-        onPointerUp={() => useDesign.getState().commit()}
-      />
+      <div className="flex items-center gap-2">
+        <input
+          type="range"
+          className="range-phosphor min-w-0 flex-1"
+          min={0}
+          max={1}
+          step={0.01}
+          value={value}
+          aria-label="Layer opacity"
+          data-opacity-range="layers"
+          onChange={(e) => {
+            const next = Number(e.target.value);
+            updateNodes(selection, { opacity: next });
+          }}
+          onPointerUp={() => useDesign.getState().commit()}
+        />
+        <NumField
+          aria-label="Layer opacity percent"
+          mixed={mixed}
+          value={Math.round(value * 100)}
+          min={0}
+          max={100}
+          className="h-6 w-12 shrink-0 rounded-[6px] border border-border bg-surface-alt px-1 font-mono text-[10px] text-right text-ink"
+          onCommit={(pct) => {
+            const opacity = Math.max(0, Math.min(1, pct / 100));
+            updateNodes(selection, { opacity });
+            useDesign.getState().commit();
+          }}
+        />
+        <span className="shrink-0 font-mono text-[9px] text-ink-faint">%</span>
+        <button
+          type="button"
+          className="h-6 shrink-0 rounded-[6px] border border-border px-1.5 font-mono text-[9px] tracking-wide text-ink-dim hover:border-phosphor hover:text-ink"
+          title="Set opacity to 100% · Alt+Shift+0"
+          onClick={() => {
+            updateNodes(selection, { opacity: 1 });
+            useDesign.getState().commit();
+          }}
+        >
+          100%
+        </button>
+      </div>
     </div>
   );
 }

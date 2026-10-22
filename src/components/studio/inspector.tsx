@@ -175,18 +175,46 @@ export function Inspector() {
           </section>
           <section className="space-y-2 border-b border-border px-3 py-3">
             <div className="font-mono text-[10px] uppercase tracking-wide text-ink-faint">Layer</div>
-            <Field label={mixedOpacity ? "Opacity \u00b7 mixed" : `Opacity ${Math.round(node.opacity * 100)}%`}>
-              <input
-                type="range"
-                className="range-phosphor w-full"
-                min={0}
-                max={1}
-                step={0.01}
-                value={node.opacity}
-                aria-label="Layer opacity"
-                onChange={(e) => updateNodes(ids, { opacity: Number(e.target.value) })}
-                onPointerUp={() => useDesign.getState().commit()}
-              />
+            <Field label={mixedOpacity ? "Opacity \u00b7 mixed" : "Opacity"}>
+              <div className="flex items-center gap-2">
+                <input
+                  type="range"
+                  className="range-phosphor min-w-0 flex-1"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={node.opacity}
+                  aria-label="Layer opacity"
+                  data-opacity-range="inspector"
+                  onChange={(e) => updateNodes(ids, { opacity: Number(e.target.value) })}
+                  onPointerUp={() => useDesign.getState().commit()}
+                />
+                <NumField
+                  aria-label="Layer opacity percent"
+                  mixed={mixedOpacity}
+                  value={Math.round(node.opacity * 100)}
+                  min={0}
+                  max={100}
+                  className="h-6 w-12 shrink-0 rounded-[6px] border border-border bg-surface-alt px-1 font-mono text-[10px] text-right text-ink"
+                  onCommit={(pct) => {
+                    const opacity = Math.max(0, Math.min(1, pct / 100));
+                    updateNodes(ids, { opacity });
+                    useDesign.getState().commit();
+                  }}
+                />
+                <span className="shrink-0 font-mono text-[9px] text-ink-faint">%</span>
+                <button
+                  type="button"
+                  className="h-6 shrink-0 rounded-[6px] border border-border px-1.5 font-mono text-[9px] tracking-wide text-ink-dim hover:border-phosphor hover:text-ink"
+                  title="Set opacity to 100% · Alt+Shift+0"
+                  onClick={() => {
+                    updateNodes(ids, { opacity: 1 });
+                    useDesign.getState().commit();
+                  }}
+                >
+                  100%
+                </button>
+              </div>
             </Field>
             <Field label={mixedBlend ? "Blend \u00b7 mixed" : "Blend"}>
               <select

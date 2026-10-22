@@ -1,19 +1,20 @@
 # The Voice Design — Improvement Loop
 
 ## Iteration
-- **When**: 2026-10-21 18:03 BST
-- **Slice**: Opacity badge focus + Alt+0–9 tenths shortcut
+- **When**: 2026-10-22 04:05 BST
+- **Slice**: Copy/paste opacity via command palette and Cmd/Ctrl+Shift+C / V
 - **Status**: Done
 
 ## Done
-- Opacity badges in layer rows are now buttons. Click selects the layer (if needed) and focuses the OpacityQuickStrip range.
-- Alt+0–9 while a layer is selected sets opacity to 0%–90% in tenths and commits (does not conflict with existing zoom keys).
-- Typecheck clean. Build clean. Browser smoke clean (desktop + mobile, no console errors).
+- Copy opacity of the first selected layer (notes mixed) with Cmd/Ctrl+Shift+C or the “Copy opacity” command. Status strip confirms the percent.
+- Paste that opacity onto the current selection with Cmd/Ctrl+Shift+V or “Paste opacity”. Applies to every selected layer and is undoable.
+- Command palette lists both actions under Edit with the keyboard hints.
+- Typecheck clean. Build clean. Browser smoke clean (canvas present, no console errors).
 
 ## Next recommended
-- Surface a matching opacity control in the inspector rail for the same selection so the badge and range stay in sync.
-- Add Alt+Shift+0 for 100% or a small “100%” chip next to the strip.
-- Consider copy/paste opacity in the command palette.
+- Opacity histogram or mixed-value indicator when selection spans many tenths.
+- Keyboard focus from the percent field back to the range with arrow keys.
+- Copy/paste other numeric properties (stroke width, blur) the same way.
 
 ## Guardrails observed
 - Auth OFF, DB OFF, localStorage only.
