@@ -1,19 +1,19 @@
 # The Voice Design — Improvement Loop
 
 ## Iteration
-- **When**: 2026-10-22 07:05 UTC
-- **Slice**: Mixed opacity range in inspector + paste chip
+- **When**: 2026-10-22 14:05 UTC
+- **Slice**: Click a mixed-opacity histogram tick to set the selection
 - **Status**: Done
 
 ## Done
-- Inspector Opacity field shows the min–max percent range when the selection is mixed (e.g. Opacity · 40–90%).
-- When an opacity is on the clipboard, a phosphor Paste chip appears next to the 100% button and applies the clipped value to the current selection (same path as Cmd+Shift+V).
+- When the selection has mixed opacity, the phosphor histogram ticks under the range are now clickable. Clicking a tick sets every selected layer to that opacity and commits.
+- Ticks use a wider hit target, cursor pointer, hover brighten, and focus ring. Title and aria-label explain the action.
 - Typecheck clean. Build clean. Browser smoke clean (desktop + mobile, canvas present, no console errors).
 
 ## Next recommended
-- Opacity histogram ticks under the range when mixed.
 - Keyboard focus from the percent field back to the range with arrow keys.
 - Live preview of the clipped opacity on the range thumb.
+- Show the count in the tick tooltip more prominently, or a small number badge on tall ticks.
 
 ## Guardrails observed
 - Auth OFF, DB OFF, localStorage only.

@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from "react";
 import { useDesign } from "@/lib/design/store";
+import { cn } from "@/lib/utils";
 import { formatEqualGapHold, getEqualGapHold, subscribeEqualGapHold } from "@/lib/design/group-transform";
 import { getInspectorRail, setInspectorRail, subscribeInspectorRail } from "@/lib/design/inspector-rail";
 import {
@@ -88,6 +89,15 @@ export function Inspector() {
   const opacityPercents = selectedNodes.map((n) => Math.round(n.opacity * 100));
   const opacityMin = opacityPercents.length ? Math.min(...opacityPercents) : 0;
   const opacityMax = opacityPercents.length ? Math.max(...opacityPercents) : 0;
+  const opacityTicks = mixedOpacity
+    ? (() => {
+        const map = opacityPercents.reduce((m, pct) => {
+          m.set(pct, (m.get(pct) ?? 0) + 1);
+          return m;
+        }, new Map<number, number>());
+        return Array.from(map, ([pct, count]) => ({ pct, count }));
+      })()
+    : [];
   const mixedBlend = new Set(selectedNodes.map((n) => n.blend)).size > 1;
   const mixedName = selectedNodes.length > 1 && new Set(selectedNodes.map((n) => n.name)).size > 1;
   const mixedX = selectedNodes.length > 1 && new Set(selectedNodes.map((n) => n.x)).size > 1;
@@ -187,18 +197,44 @@ export function Inspector() {
               }
             >
               <div className="flex items-center gap-2">
-                <input
-                  type="range"
-                  className="range-phosphor min-w-0 flex-1"
-                  min={0}
-                  max={1}
-                  step={0.01}
-                  value={node.opacity}
-                  aria-label="Layer opacity"
-                  data-opacity-range="inspector"
-                  onChange={(e) => updateNodes(ids, { opacity: Number(e.target.value) })}
-                  onPointerUp={() => useDesign.getState().commit()}
-                />
+                <div className={cn("relative min-w-0 flex-1", mixedOpacity && "mb-2")}>
+                  <input
+                    type="range"
+                    className="range-phosphor w-full"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={node.opacity}
+                    aria-label="Layer opacity"
+                    data-opacity-range="inspector"
+                    onChange={(e) => updateNodes(ids, { opacity: Number(e.target.value) })}
+                    onPointerUp={() => useDesign.getState().commit()}
+                  />
+                  {mixedOpacity && opacityTicks.length > 0 && (
+                    <div
+                      className="absolute inset-x-0 top-full mt-px h-2"
+                    >
+                      {opacityTicks.map(({ pct, count }) => (
+                        <button
+                          key={pct}
+                          type="button"
+                          className="absolute bottom-0 w-1.5 -translate-x-1/2 cursor-pointer bg-phosphor/80 hover:bg-phosphor focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-phosphor"
+                          style={{
+                            left: `${pct}%`,
+                            height: `${Math.min(8, 2 + count * 2)}px`,
+                          }}
+                          title={`${count} layer${count === 1 ? "" : "s"} at ${pct}% · click to set all`}
+                          aria-label={`Set opacity to ${pct}%`}
+                          onClick={() => {
+                            const opacity = Math.max(0, Math.min(1, pct / 100));
+                            updateNodes(ids, { opacity });
+                            useDesign.getState().commit();
+                          }}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <NumField
                   aria-label="Layer opacity percent"
                   mixed={mixedOpacity}
