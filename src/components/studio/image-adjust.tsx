@@ -7,6 +7,7 @@ import {
 import { useDesign } from "@/lib/design/store";
 import type { BitmapAdjust, DesignNode, ImageNode, PaintNode } from "@/lib/design/types";
 import type { CSSProperties } from "react";
+import { nextFromRangeKey } from "./range-keys";
 import { Field } from "./inspector-parts";
 
 const FILTERS = [
@@ -61,6 +62,10 @@ export function ImageAdjust({ node }: { node: DesignNode }) {
                 patchImage(img.id, { filters: { ...filters, [f.key]: Number(e.target.value) } })
               }
               onPointerUp={() => useDesign.getState().commit()}
+              onKeyDown={(e) => {
+                const next = nextFromRangeKey(e, value, f.min, f.max, f.step);
+                if (next != null) patchImage(img.id, { filters: { ...filters, [f.key]: next } }, true);
+              }}
             />
           </Field>
         );
@@ -79,6 +84,8 @@ export function ImageAdjust({ node }: { node: DesignNode }) {
           <input
             type="range"
             className="range-phosphor w-full"
+            data-fill-range="crop"
+            style={{ "--fill-percent": String(Math.max(0, Math.min(1, (value - 0.01) / (1 - 0.01)))) } as CSSProperties}
             min={0.01}
             max={1}
             step={0.01}
@@ -88,6 +95,10 @@ export function ImageAdjust({ node }: { node: DesignNode }) {
               patchImage(img.id, { crop: normalizeCrop({ ...crop, [key]: Number(e.target.value) }) })
             }
             onPointerUp={() => useDesign.getState().commit()}
+            onKeyDown={(e) => {
+              const next = nextFromRangeKey(e, value, 0.01, 1, 0.01);
+              if (next != null) patchImage(img.id, { crop: normalizeCrop({ ...crop, [key]: next }) }, true);
+            }}
           />
         </Field>
       ))}

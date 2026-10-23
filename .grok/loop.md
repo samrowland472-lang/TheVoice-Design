@@ -1,21 +1,19 @@
 # The Voice Design — Improvement Loop
 
 ## Iteration
-- **When**: 2026-10-23 08:05 UTC
-- **Slice**: Photo filter and shadow-blur ranges show live phosphor track fill
+- **When**: 2026-10-23 19:05 UTC
+- **Slice**: PageUp/PageDown coarse steps on phosphor fill ranges
 - **Status**: Done
 
 ## Done
-- Photo filter ranges (Brightness, Contrast, Saturate, Blur) in the single-layer Photo inspector and the mixed Photos strip now draw a phosphor-to-ground track fill whose length and intensity follow the normalized value.
-- Layer shadow Blur range uses the same treatment.
-- CSS uses `[data-fill-range]` + `--fill-percent` so opacity ranges keep their dedicated `--fill-opacity` path.
-- Opacity tracks, mixed ticks, keyboard commit, and all other solid phosphor ranges unchanged.
-- Typecheck clean. Build clean. Browser smoke clean (desktop + mobile, canvas present, no console errors).
+- Shared `nextFromRangeKey` helper: Home → min, End → max, PageUp/PageDown → ~10% of the range snapped to step.
+- Applied to type size/weight/tracking/leading (single and mixed), photo filters, crop edges, shadow blur, mixed photo filters, and layer opacity.
+- Typecheck clean. Build clean. Browser smoke clean (no console or page errors, no brand warnings).
 
 ## Next recommended
-- Keyboard Home/End on the range inputs themselves.
-- Small opacity histogram legend when mixed.
-- Optional fill for remaining positive ranges (type size, crop edges) with the same percent variable.
+- Tiny mixed-blend legend when blend modes differ.
+- Optional fill on remaining positive ranges (axes, path dash, etc.).
+- Keyboard coarse steps on the remaining non-fill ranges that already have Home/End.
 
 ## Guardrails observed
 - Auth OFF, DB OFF, localStorage only.

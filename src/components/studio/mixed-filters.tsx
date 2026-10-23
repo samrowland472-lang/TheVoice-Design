@@ -3,6 +3,7 @@ import { useDesign } from "@/lib/design/store";
 import type { DesignNode, ImageNode, PaintNode } from "@/lib/design/types";
 import { isBitmap } from "@/lib/design/types";
 import type { CSSProperties } from "react";
+import { nextFromRangeKey } from "./range-keys";
 import { cn } from "@/lib/utils";
 import { Field } from "./inspector-parts";
 
@@ -73,6 +74,13 @@ export function MixedFilters({ nodes }: { nodes: DesignNode[] }) {
               value={value}
               onChange={(e) => patchImageFilters(ids, { [f.key]: Number(e.target.value) })}
               onPointerUp={() => useDesign.getState().commit()}
+              onKeyDown={(e) => {
+                const next = nextFromRangeKey(e, value, f.min, f.max, f.step);
+                if (next != null) {
+                  patchImageFilters(ids, { [f.key]: next });
+                  useDesign.getState().commit();
+                }
+              }}
             />
           </Field>
         );

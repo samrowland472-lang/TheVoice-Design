@@ -1,3 +1,4 @@
+import { nextFromRangeKey } from "./range-keys";
 import { useEffect, useRef, useSyncExternalStore, type CSSProperties } from "react";
 import { useDesign } from "@/lib/design/store";
 import { cn } from "@/lib/utils";
@@ -96,7 +97,7 @@ export function Inspector() {
           m.set(pct, (m.get(pct) ?? 0) + 1);
           return m;
         }, new Map<number, number>());
-        return Array.from(map, ([pct, count]) => ({ pct, count }));
+        return Array.from(map, ([pct, count]) => ({ pct, count })).sort((a, b) => a.pct - b.pct);
       })()
     : [];
   const mixedBlend = new Set(selectedNodes.map((n) => n.blend)).size > 1;
@@ -209,10 +210,14 @@ export function Inspector() {
                     value={node.opacity}
                     aria-label="Layer opacity"
                     data-opacity-range="inspector"
-                    title="Arrow keys step opacity · Home/End jump 0–100% · from the percent field, arrows focus here"
+                    title="Arrow keys step opacity · PageUp/PageDown coarse · Home/End jump 0–100% · from the percent field, arrows focus here"
                     style={{ "--fill-opacity": String(node.opacity) } as CSSProperties}
                     onChange={(e) => updateNodes(ids, { opacity: Number(e.target.value) })}
                     onPointerUp={() => useDesign.getState().commit()}
+                    onKeyDown={(e) => {
+                      const next = nextFromRangeKey(e, node.opacity, 0, 1, 0.01);
+                      if (next != null) updateNodes(ids, { opacity: next });
+                    }}
                     onKeyUp={(e) => {
                       if (
                         e.key === "ArrowUp" ||
@@ -328,6 +333,16 @@ export function Inspector() {
                   </button>
                 )}
               </div>
+              {mixedOpacity && opacityTicks.length > 0 && (
+                <div className="mt-1.5 font-mono text-[8px] leading-none text-ink-faint" aria-label="Opacity histogram legend">
+                  {opacityTicks.map(({ pct, count }, i) => (
+                    <span key={pct}>
+                      {i > 0 && <span className="text-ink-faint/60"> · </span>}
+                      <span className="text-phosphor">{count}×</span>{pct}%
+                    </span>
+                  ))}
+                </div>
+              )}
             </Field>
             <Field label={mixedBlend ? "Blend \u00b7 mixed" : "Blend"}>
               <select

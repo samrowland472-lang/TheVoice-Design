@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { nextFromRangeKey } from "./range-keys";
 import { CANVAS_FONTS } from "@/lib/design/fonts";
 import { paletteFromSrc, paletteName } from "@/lib/design/palette";
 import { bestInk, contrastRatio, solidHex, wcagLevel } from "@/lib/design/contrast";
@@ -198,6 +199,14 @@ export function ShadowEditor({ nodes }: { nodes: DesignNode[] }) {
               aria-label={mixedBlur ? "layer shadow blur mixed" : "layer shadow blur"}
               onChange={(e) => stampAll((cur) => stampShadowBlur(cur, Number(e.target.value)))}
               onPointerUp={commit}
+              onKeyDown={(e) => {
+                const curVal = mixedBlur ? 0 : ghost.blur;
+                const next = nextFromRangeKey(e, curVal, 0, 80, 1);
+                if (next != null) {
+                  stampAll((cur) => stampShadowBlur(cur, next));
+                  commit();
+                }
+              }}
             />
           </Field>
           <Field label={mixedOx ? "X \u00b7 mixed" : `X ${ghost.ox}`}>
