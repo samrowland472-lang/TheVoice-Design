@@ -1,22 +1,17 @@
 # The Voice Design — Improvement Loop
 
-## Iteration
-- **When**: 2026-10-23 22:05 UTC
-- **Slice**: Polish mixed cap/join legends with visual icons and count badges
-- **Status**: Done
-
 ## Done
-- MixedCapLegend and MixedJoinLegend now include tiny inline SVG icons showing the actual line-cap and line-join style (butt/round/square, miter/round/bevel).
-- Count pills restyled as subtle phosphor badges. Buttons slightly larger with hover feedback.
-- Ghost preview on hover/focus still unifies the outline style for inspection.
-- Typecheck clean. Build clean. Browser smoke clean (no console or page errors).
+- Clipboard and selection actions now work: Duplicate (Cmd+D), Copy (Cmd+C), Cut (Cmd+X), Paste (Cmd+V), Remove (Delete), Select all (Cmd+A).
+- Groups and their children are cloned together with remapped parent IDs.
+- Layers panel has a Duplicate button next to Group / Ungroup.
+- Command palette lists Duplicate, Copy, Cut, and Paste.
+- Fit artboard and zoom shortcuts set view intent correctly.
+- Layers panel rows now include a compact opacity scrubber for direct per-layer opacity tweaks without leaving the list.
+- Opacity scrubber in Layers rows is now hover-only (or always visible when the layer is selected) with a larger hit target for better usability.
+
+## Iteration
+2026-10-24 03:15 BST — Polished Layers panel opacity scrubber: hover-only visibility (visible when selected), larger width/height for improved touch targets. Verified typecheck, build, and browser smoke.
 
 ## Next recommended
-- Optional fill on remaining positive ranges (axes, path dash, etc.).
-- Keyboard coarse steps on the remaining non-fill ranges that already have Home/End.
-- Tiny mixed legend for other multi-value enums if any remain.
-
-## Guardrails observed
-- Auth OFF, DB OFF, localStorage only.
-- Phosphor styling, no emoji chrome, no second brand.
-- One vertical slice only.
+- Deepen path point inspector or add live dash/offset preview on the canvas.
+- Or add keyboard shortcuts for opacity tenths directly from the layers list.

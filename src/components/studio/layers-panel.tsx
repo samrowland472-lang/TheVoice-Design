@@ -172,6 +172,15 @@ export function LayersPanel() {
           >
             Ungroup
           </button>
+          <button
+            type="button"
+            className="h-7 flex-1 rounded-[6px] border border-border font-mono text-[10px] tracking-[0.14em] text-ink-dim uppercase hover:border-phosphor hover:text-ink disabled:opacity-30"
+            disabled={!selection.length}
+            onClick={() => useDesign.getState().duplicateSelected()}
+            title="Duplicate selection (Cmd+D)"
+          >
+            Duplicate
+          </button>
         </div>
         {isolateSnapshot ? (
           <button
@@ -222,7 +231,7 @@ export function LayersPanel() {
               )}
               <div
                 className={cn(
-                  "flex h-9 items-center gap-0.5 rounded-[8px] px-0.5 text-xs",
+                  "group flex h-9 items-center gap-0.5 rounded-[8px] px-0.5 text-xs",
                   active ? "bg-phosphor/10 text-ink" : "text-ink-dim hover:bg-surface-alt",
                   dragging && "opacity-40",
                   into && !blocked && "ring-1 ring-phosphor",
@@ -383,6 +392,29 @@ export function LayersPanel() {
                     )}
                   </button>
                 )}
+                <div className={cn(
+                  "flex items-center px-1 -mx-1 transition-opacity duration-150",
+                  active ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto"
+                )}>
+                  <input
+                    type="range"
+                    className="range-phosphor h-5 w-20 shrink-0"
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    value={n.opacity}
+                    aria-label={`${n.name || n.kind} opacity`}
+                    data-opacity-range="row"
+                    style={{ "--fill-opacity": String(n.opacity) } as CSSProperties}
+                    onChange={(e) => {
+                      const next = Number(e.target.value);
+                      updateNodes([n.id], { opacity: next });
+                    }}
+                    onPointerUp={() => useDesign.getState().commit()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    title="Scrub layer opacity"
+                  />
+                </div>
                 <button
                   type="button"
                   className="size-7 rounded-[6px] hover:bg-ground"
