@@ -29,11 +29,13 @@
 - Layers Type quick strip now includes a Weight range (100–900, step 100) with live canvas updates and a NumField for exact entry. Mixed weights show Mixed and apply to all selected text.
 - Type quick strip summary now includes weight (size / weight / tracking / leading). Mixed any property shows Mixed.
 - Layers Type quick strip now includes a Family select of canvas fonts. Mixed families show Mixed and a choice applies to the selection.
+- Type quick strip summary now has compact click-to-edit weight and font-family badges (inline number field / picker, Enter/Escape/blur). Mixed shows Mixed.
+- Live phosphor type rhythm overlay now includes weight: scrubbing the Weight range (or keyboard) sets a weight ghost that updates measured advance and thickens leading lines on selected text.
 
 ## Iteration
-2026-10-24 18:04 BST — Weight range and Family select added to Layers Type quick strip. Live weight updates on canvas; mixed handling for weight and family. Verified typecheck, build, and browser smoke.
+2026-10-24 21:05 BST — Weight ghost extended to Type inspector and Mixed Type weight ranges. Scrub or keyboard-nudge weight to see live phosphor rhythm (thicker leading lines). Verified typecheck, build, and browser smoke.
 
 ## Next recommended
-- Compact weight badge (click-to-edit) in the Type quick strip summary area.
-- Font-family badge next to the summary that opens the picker.
-- Live phosphor overlay for weight (or style axis) while scrubbing.
+- Clickable size / tracking / leading badges in the Type quick strip summary for consistency.
+- Type rhythm overlay ticks while scrubbing weight (independent of tracking).
+- Align inspector/mixed weight ranges with Layers (100–900) for consistency.
