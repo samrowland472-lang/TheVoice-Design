@@ -3,8 +3,10 @@ import { ChevronDown, ChevronRight, ChevronUp, Eye, EyeOff, GripVertical, Link2,
 import { useDesign } from "@/lib/design/store";
 import { flattenLayers, layerDropLegal, type LayerDrop } from "@/lib/design/groups";
 import { isGroup, isText, type DesignNode } from "@/lib/design/types";
+import { CANVAS_FONTS } from "@/lib/design/fonts";
 import { cn } from "@/lib/utils";
 import { NumField } from "./num-field";
+import { nextFromRangeKey } from "./range-keys";
 import {
   alignCommitLayerFadeLine,
   alignCommitSolidLead,
@@ -53,6 +55,9 @@ export function LayersPanel() {
   const [trackDraft, setTrackDraft] = useState("");
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null);
   const [leadDraft, setLeadDraft] = useState("");
+  const [editingWeightId, setEditingWeightId] = useState<string | null>(null);
+  const [weightDraft, setWeightDraft] = useState("");
+  const [editingFamilyId, setEditingFamilyId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
 
   if (!doc) return null;
@@ -484,6 +489,86 @@ export function LayersPanel() {
                         }}
                       />
                     )}
+                    {isText(n) && editingWeightId !== n.id && (
+                      <button
+                        type="button"
+                        className="ml-1.5 inline-block rounded-[4px] bg-surface-alt px-1 py-px font-mono text-[9px] tracking-wide text-ink-faint hover:bg-phosphor/15 hover:text-phosphor"
+                        title="Click to edit weight"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (!selection.includes(n.id)) select([n.id]);
+                          setWeightDraft(String(Math.round(n.fontWeight)));
+                          setEditingWeightId(n.id);
+                        }}
+                      >
+                        {Math.round(n.fontWeight)}
+                      </button>
+                    )}
+                    {isText(n) && editingWeightId === n.id && (
+                      <input
+                        type="number"
+                        min={100}
+                        max={900}
+                        step={100}
+                        value={weightDraft}
+                        autoFocus
+                        aria-label={`${n.name || n.kind} weight`}
+                        className="ml-1.5 inline-block h-5 w-10 rounded-[4px] border border-phosphor bg-surface px-1 font-mono text-[9px] text-ink"
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => setWeightDraft(e.target.value)}
+                        onBlur={() => {
+                          const next = Math.max(100, Math.min(900, Math.round(Number(weightDraft) || n.fontWeight)));
+                          updateNodes([n.id], { fontWeight: next } as Partial<DesignNode>, true);
+                          setEditingWeightId(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            const next = Math.max(100, Math.min(900, Math.round(Number(weightDraft) || n.fontWeight)));
+                            updateNodes([n.id], { fontWeight: next } as Partial<DesignNode>, true);
+                            setEditingWeightId(null);
+                          } else if (e.key === "Escape") {
+                            setEditingWeightId(null);
+                          }
+                        }}
+                      />
+                    )}
+                    {isText(n) && editingFamilyId !== n.id && (
+                      <button
+                        type="button"
+                        className="ml-1.5 inline-block max-w-[5.5rem] truncate rounded-[4px] bg-surface-alt px-1 py-px font-mono text-[9px] tracking-wide text-ink-faint hover:bg-phosphor/15 hover:text-phosphor"
+                        title={`Click to change font family · ${n.fontFamily}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (!selection.includes(n.id)) select([n.id]);
+                          setEditingFamilyId(n.id);
+                        }}
+                      >
+                        {n.fontFamily.split(" ")[0] || n.fontFamily}
+                      </button>
+                    )}
+                    {isText(n) && editingFamilyId === n.id && (
+                      <select
+                        className="ml-1.5 inline-block h-5 max-w-[7rem] rounded-[4px] border border-phosphor bg-surface px-0.5 font-mono text-[9px] text-ink"
+                        value={n.fontFamily}
+                        autoFocus
+                        aria-label={`${n.name || n.kind} font family`}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => {
+                          updateNodes([n.id], { fontFamily: e.target.value } as Partial<DesignNode>, true);
+                          setEditingFamilyId(null);
+                        }}
+                        onBlur={() => setEditingFamilyId(null)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") setEditingFamilyId(null);
+                        }}
+                      >
+                        {CANVAS_FONTS.map((f) => (
+                          <option key={f.id} value={f.family}>{f.family}</option>
+                        ))}
+                      </select>
+                    )}
                     {isKey && (
                       <span className="ml-1.5 inline-block rounded-[4px] bg-phosphor/20 px-1 py-px font-mono text-[9px] tracking-[0.14em] text-phosphor uppercase">
                         Key
@@ -674,6 +759,13 @@ function TypeQuickStrip() {
   const tracking = trackMixed ? textNodes[textNodes.length - 1].letterSpacing : textNodes[0].letterSpacing;
   const leading = leadMixed ? textNodes[textNodes.length - 1].lineHeight : textNodes[0].lineHeight;
   const ids = textNodes.map((n) => n.id);
+  const clearGhost = () => {
+    const s = useDesign.getState();
+    if (s.typeGhost) {
+      s.setTypeGhost(null);
+      s.commit();
+    }
+  };
   return (
     <div className="mt-2 rounded-[8px] border border-border bg-surface px-2 py-1.5">
       <div className="mb-1 flex items-center justify-between font-mono text-[10px] tracking-[0.14em] text-ink-faint uppercase">
@@ -699,7 +791,16 @@ function TypeQuickStrip() {
             useDesign.getState().setTypeGhost({ fontSize: next });
             updateNodes(ids, { fontSize: next } as Partial<DesignNode>);
           }}
-          onPointerUp={() => { useDesign.getState().setTypeGhost(null); useDesign.getState().commit(); }}
+          onPointerUp={clearGhost}
+          onKeyUp={clearGhost}
+          onBlur={clearGhost}
+          onKeyDown={(e) => {
+            const next = nextFromRangeKey(e, size, 8, 160, 1);
+            if (next != null) {
+              useDesign.getState().setTypeGhost({ fontSize: next });
+              updateNodes(ids, { fontSize: next } as Partial<DesignNode>);
+            }
+          }}
         />
         <NumField
           aria-label="Type size"
@@ -731,7 +832,16 @@ function TypeQuickStrip() {
             useDesign.getState().setTypeGhost({ letterSpacing: next });
             updateNodes(ids, { letterSpacing: next } as Partial<DesignNode>);
           }}
-          onPointerUp={() => { useDesign.getState().setTypeGhost(null); useDesign.getState().commit(); }}
+          onPointerUp={clearGhost}
+          onKeyUp={clearGhost}
+          onBlur={clearGhost}
+          onKeyDown={(e) => {
+            const next = nextFromRangeKey(e, tracking, -8, 40, 0.25);
+            if (next != null) {
+              useDesign.getState().setTypeGhost({ letterSpacing: next });
+              updateNodes(ids, { letterSpacing: next } as Partial<DesignNode>);
+            }
+          }}
         />
         <NumField
           aria-label="Type tracking"
@@ -763,7 +873,16 @@ function TypeQuickStrip() {
             useDesign.getState().setTypeGhost({ lineHeight: next });
             updateNodes(ids, { lineHeight: next } as Partial<DesignNode>);
           }}
-          onPointerUp={() => { useDesign.getState().setTypeGhost(null); useDesign.getState().commit(); }}
+          onPointerUp={clearGhost}
+          onKeyUp={clearGhost}
+          onBlur={clearGhost}
+          onKeyDown={(e) => {
+            const next = nextFromRangeKey(e, leading, 0.7, 2, 0.02);
+            if (next != null) {
+              useDesign.getState().setTypeGhost({ lineHeight: next });
+              updateNodes(ids, { lineHeight: next } as Partial<DesignNode>);
+            }
+          }}
         />
         <NumField
           aria-label="Type leading"

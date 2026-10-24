@@ -20,10 +20,15 @@
 - Text layers in the Layers panel now show a compact tracking badge next to the type-size badge (click to open an inline number field for exact tracking entry, Enter/Escape, range -8 to 40).
 - Text layers in the Layers panel now show a compact leading badge next to the size and tracking badges (click to open an inline number field for exact leading entry, Enter/Escape, range 0.7–2, step 0.02). Type quick strip now includes a Leading scrubber and shows size / tracking / leading in the summary.
 - Live phosphor type rhythm overlay: while scrubbing Size, Tracking, or Leading (in the inspector, mixed type, or Layers Type quick strip) horizontal leading lines and approximate tracking ticks appear on selected text layers.
+- Text layers in the Layers panel now show a compact weight badge next to the size / tracking / leading badges (click to open an inline number field for exact weight entry, Enter/Escape, range 100–900, step 100).
+
+- Text layers in the Layers panel now show a compact font-family badge (first word of the family name) next to the weight badge. Click opens a picker of the canvas fonts; change or Escape/blur closes it.
+- Type rhythm overlay (phosphor leading lines + tracking ticks) now reacts to keyboard nudges on Size / Tracking / Leading ranges: Arrow keys, Home, End, PageUp/PageDown show the live ghost while the key is held and clear + commit on keyup or blur (Layers Type quick strip, inspector Type fields, and mixed Type).
 
 ## Iteration
-2026-10-24 15:05 BST — Added live phosphor type rhythm overlay (leading lines + tracking ticks) while scrubbing Size / Tracking / Leading in inspector or Layers. Verified typecheck, build, and browser smoke.
+2026-10-24 18:10 BST — Type rhythm overlay now follows keyboard nudges on Size, Tracking, and Leading ranges (Arrow / Home / End / Page). Ghost clears and commits on keyup or blur. Verified typecheck, build, and browser smoke.
 
 ## Next recommended
-- Compact font-family or weight badge in Layers rows for text.
-- Type rhythm overlay also reacts to keyboard nudges on the range inputs.
+- Weight badge in the Type quick strip.
+- Compact font-family badge also appears in the Type quick strip.
+- Weight range in Layers Type quick strip with live preview.
