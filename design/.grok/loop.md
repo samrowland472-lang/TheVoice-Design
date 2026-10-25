@@ -1,6 +1,7 @@
 # The Voice Design — Improvement Loop
 
 ## Done
+- Type quick strip Mixed badges now open their editor starting from the last value applied to that property (size, weight, tracking, leading, family). Falls back to the last selected node when no prior value has been set this session. Mixed labels remain only on the specific properties that differ.
 - Clipboard and selection actions now work: Duplicate (Cmd+D), Copy (Cmd+C), Cut (Cmd+X), Paste (Cmd+V), Remove (Delete), Select all (Cmd+A).
 - Groups and their children are cloned together with remapped parent IDs.
 - Layers panel has a Duplicate button next to Group / Ungroup.
@@ -32,11 +33,13 @@
 - Type quick strip summary now shows per-property badges even when mixed: Mixed properties display a phosphor “Mixed” label (click still opens the editor to set the value on all selected text). Non-mixed show the live value. Family badge included.
 - Type rhythm overlay now draws baseline ticks (left and right vertical markers) on each leading line while scrubbing Size or Leading. The ticks track the ghosted size and leading live so the baseline rhythm stays visible during type adjustments.
 - Type rhythm overlay for Size ghosts now also draws a mid-line center tick on each baseline plus intermediate density marks spaced by the ghosted size. The marks update live while the Size range is scrubbed.
+- Type rhythm overlay for Leading ghosts now draws a mid-line center tick plus intermediate density marks along each baseline. Density spacing follows the ghosted line height so the vertical rhythm stays readable while scrubbing.
+
+- Type quick strip Mixed editors now remember last-used values (size, weight, tracking, leading, family) across page reloads via localStorage. Editors still start from the remembered value when a property is mixed; Mixed badges remain per-property.
 
 ## Iteration
-2026-10-25 03:10 BST — Type rhythm overlay for size ghosts adds mid-line center ticks and intermediate density marks along each baseline. Density spacing follows the ghosted font size so the scale of the type is readable while scrubbing. Verified typecheck, build, and browser smoke.
-
+2026-10-25 06:05 GMT — Persisted last-used type values for Mixed Type quick strip editors across reloads with localStorage. Verified typecheck, build, and browser smoke.
 ## Next recommended
-- Show mixed indicator only on the specific badges that differ, and keep last-used value as the edit starting point.
-- Type rhythm overlay: optional mid-line ticks or density for leading ghosts.
 - Align the Type inspector baseline preview with the canvas rhythm overlay.
+- Type rhythm overlay: density marks for tracking ghosts that follow measured advance more closely.
+- Show a subtle phosphor flash on the Layers Type strip when a last-used value is applied from memory.
