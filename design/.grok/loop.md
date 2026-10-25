@@ -1,6 +1,7 @@
 # The Voice Design — Improvement Loop
 
 ## Done
+- Type quick strip is now collapsible (phosphor chevron, state remembered in localStorage). When collapsed, the size / weight / tracking / leading / family mini badges stay available on hover or focus of the strip. Layer-row type badges are hover-only (always visible when the layer is selected), independent of strip state.
 - Type quick strip Mixed badges now open their editor starting from the last value applied to that property (size, weight, tracking, leading, family). Falls back to the last selected node when no prior value has been set this session. Mixed labels remain only on the specific properties that differ.
 - Clipboard and selection actions now work: Duplicate (Cmd+D), Copy (Cmd+C), Cut (Cmd+X), Paste (Cmd+V), Remove (Delete), Select all (Cmd+A).
 - Groups and their children are cloned together with remapped parent IDs.
@@ -37,9 +38,20 @@
 
 - Type quick strip Mixed editors now remember last-used values (size, weight, tracking, leading, family) across page reloads via localStorage. Editors still start from the remembered value when a property is mixed; Mixed badges remain per-property.
 
+- Type inspector now includes a compact phosphor Rhythm strip that draws baseline ticks, a mid-line center mark, density ticks, and tracking marks matching the canvas type rhythm overlay. Updates live while scrubbing size, leading, tracking, or weight (and when a type ghost is active).
+
+- Type rhythm overlay tracking density marks now follow the measured average advance of each line’s content (instead of a single approximate top row). Weight and tracking ghosts draw the marks near every baseline so density tracks the live type more closely. The Type inspector Rhythm strip uses the same measured advance for its tracking marks.
+
+- Layers Type quick strip now flashes a subtle phosphor pulse when a Mixed badge opens an editor pre-filled from the remembered last-used value (size, weight, tracking, leading, or family). The flash confirms memory was applied.
+
+- Layers Type quick strip Mixed badges now flash individually (phosphor pulse on the specific badge) when opened with a last-used value from localStorage. The pulse confirms which property received the remembered value.
+
+- Type rhythm overlay now draws per-glyph advance ticks for short lines (≤8 glyphs) while scrubbing tracking or weight. Ticks sit at each character’s center, aligned to the line’s text-align, so tracking rhythm is precise on headlines and short copy. Longer lines keep the average-advance marks.
+
+- Type inspector Rhythm strip matches the canvas: when the measured sample is short (≤8 characters) it draws per-glyph ticks instead of average spacing.
+
 ## Iteration
-2026-10-25 06:05 GMT — Persisted last-used type values for Mixed Type quick strip editors across reloads with localStorage. Verified typecheck, build, and browser smoke.
+2026-10-25 21:15 GMT — Type quick strip is collapsible with a phosphor chevron; collapse state persists in localStorage. Collapsed strip still reveals size / weight / tracking / leading / family mini badges on hover or focus. Layer-row type badges are hover-only (always shown when selected). Verified typecheck, build, and browser smoke.
 ## Next recommended
-- Align the Type inspector baseline preview with the canvas rhythm overlay.
-- Type rhythm overlay: density marks for tracking ghosts that follow measured advance more closely.
-- Show a subtle phosphor flash on the Layers Type strip when a last-used value is applied from memory.
+- Path point inspector: optional live tangent length numbers on the canvas while scrubbing in/out handles.
+- Type quick strip: optional keyboard shortcut (e.g. Shift+T) to toggle collapse when the Layers panel is focused.
