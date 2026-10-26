@@ -1,6 +1,7 @@
 # The Voice Design — Improvement Loop
 
 ## Done
+- Path point inspector Len toggle now also shows live rounded tangent length numbers in the point row next to the In and Out handle fields (phosphor tabular mono). Lengths match the canvas numbers and update as handles change. Len button tooltip mentions both canvas and row.
 - Path point inspector now has a Len toggle (persisted in localStorage) that shows live phosphor tangent length numbers on the canvas next to the active in/out handle while it is focused or dragged. Numbers follow the measured handle length and update as the arm changes.
 - Type quick strip collapses and expands with Shift+T when the Layers panel is focused (no modifier conflicts). The chevron button title mentions the shortcut. Collapse state still persists in localStorage.
 - Type quick strip is now collapsible (phosphor chevron, state remembered in localStorage). When collapsed, the size / weight / tracking / leading / family mini badges stay available on hover or focus of the strip. Layer-row type badges are hover-only (always visible when the layer is selected), independent of strip state.
@@ -52,8 +53,14 @@
 
 - Type inspector Rhythm strip matches the canvas: when the measured sample is short (≤8 characters) it draws per-glyph ticks instead of average spacing.
 
+- Type rhythm overlay now has a Glyph toggle (persisted in localStorage) that shows per-glyph advance ticks independently of line length. When on, ticks are drawn for lines up to 32 glyphs (average spacing beyond that); when off, average spacing is used for all lines. The Type inspector Rhythm strip includes the same toggle and matches the canvas.
+
+- Path point inspector Len toggle now also shows both in and out tangent lengths at once on the canvas when the anchor is selected (in addition to the focused/dragged handle). Lengths update live with the measured handle arms.
+
+- Path point inspector Mirror state is now remembered per point (node + index + hole) across reloads via localStorage. Toggling Mirror on a point keeps it on when you return to that point, and the opposite handle stays mirrored while you edit either arm.
+
 ## Iteration
-2026-10-26 04:15 GMT — Path point Len toggle shows live tangent length numbers on the canvas while scrubbing or focusing in/out handles. Preference persists. Verified typecheck, build, and browser smoke.
+2026-10-26 18:15 GMT — Path point inspector Len toggle shows live tangent length numbers in the point row next to In/Out fields. Verified typecheck, build, and browser smoke.
 ## Next recommended
-- Type rhythm overlay: optional toggle to show or hide per-glyph ticks independently of line length.
-- Path point inspector: show both in and out lengths at once when the anchor is selected.
+- Layers panel: optional keyboard shortcut to cycle type-strip focus (size → weight → tracking → leading).
+- Path point inspector: optional keyboard nudge for selected handle length while Len is on.
