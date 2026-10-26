@@ -239,6 +239,7 @@ export function drawPathTangents(
   zoom: number,
   active?: PathEditHit | null,
   tone: "phosphor" | "cool" = "phosphor",
+  showLengths = false,
 ) {
   void tone;
   if (!pts.length) return;
@@ -279,6 +280,21 @@ export function drawPathTangents(
         ctx.strokeStyle = "rgba(126,224,255,0.55)";
         ctx.lineWidth = armW;
         ctx.stroke();
+        ctx.restore();
+      }
+      const isAnchorActive = active?.index === i && active.arm === "anchor";
+      if (showLengths && (hot || isAnchorActive)) {
+        const length = Math.round(Math.hypot(h.x, h.y));
+        const len = Math.hypot(h.x, h.y) || 1;
+        const ux = h.x / len;
+        const uy = h.y / len;
+        ctx.save();
+        ctx.fillStyle = "#7ee0ff";
+        ctx.font = `${11 / zoom}px "IBM Plex Mono", ui-monospace, monospace`;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        const off = 10 / zoom;
+        ctx.fillText(`${length}`, hx + ux * off, hy + uy * off);
         ctx.restore();
       }
       ctx.beginPath();

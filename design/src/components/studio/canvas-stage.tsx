@@ -121,6 +121,7 @@ export function CanvasStage() {
   const typeGhost = useDesign((s) => s.typeGhost);
   const booleanPreview = useDesign((s) => s.booleanPreview);
   const pathEditHit = useDesign((s) => s.pathEditHit);
+  const showTangentLengths = useDesign((s) => s.showTangentLengths);
   const tool = useDesign((s) => s.tool);
   const brush = useDesign((s) => s.brush);
   const present = useDesign((s) => s.present);
@@ -175,7 +176,7 @@ export function CanvasStage() {
     ctx.translate(viewport.x, viewport.y);
     ctx.scale(viewport.zoom, viewport.zoom);
     if (showTangents && selected && isPath(selected)) {
-      drawPathNodeTangents(ctx, selected, viewport.zoom, pathEditHit);
+      drawPathNodeTangents(ctx, selected, viewport.zoom, pathEditHit, showTangentLengths);
     }
     if (!present && tool === "pen" && selected && isPath(selected) && !selected.closed && selected.points.length) {
       const last = selected.points[selected.points.length - 1]!;
@@ -371,7 +372,8 @@ export function CanvasStage() {
       }
       if (typeGhost && selection.length) {
         const selectedNodes = doc.nodes.filter((n) => selection.includes(n.id));
-        drawTypeRhythmGhosts(ctx, selectedNodes, typeGhost, viewport.zoom);
+        const preferPerGlyph = useDesign.getState().showPerGlyphTicks;
+        drawTypeRhythmGhosts(ctx, selectedNodes, typeGhost, viewport.zoom, preferPerGlyph);
       }
       if (strokeGhost && selection.length) {
         const selectedNodes = doc.nodes.filter((n) => selection.includes(n.id));
@@ -502,7 +504,7 @@ export function CanvasStage() {
       }
     }
     ctx.restore();
-  }, [doc, viewport, selection, booleanPreview, tool, present, pathEditHit, hoverTick, nudgeHold, inspectorRail, distributePreview, alignPreview, alignEcho, strokeGhost, typeGhost]);
+  }, [doc, viewport, selection, booleanPreview, tool, present, pathEditHit, showTangentLengths, hoverTick, nudgeHold, inspectorRail, distributePreview, alignPreview, alignEcho, strokeGhost, typeGhost]);
 
   useEffect(() => {
     const wrap = wrapRef.current;

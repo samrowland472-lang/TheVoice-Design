@@ -13,7 +13,7 @@ import {
 import type { Align, DesignNode, TextNode } from "@/lib/design/types";
 import { NumField } from "./num-field";
 import { MixedAxisSliders } from "./mixed-type-axes";
-import { CopyMeter } from "./inspector-type";
+import { CopyMeter, TypeRhythmPreview } from "./inspector-type";
 
 const ALIGNS: Align[] = ["left", "center", "right"];
 
@@ -229,8 +229,8 @@ export function MixedType({ nodes }: { nodes: TextNode[] }) {
       <label className="mt-2 block text-[11px] text-ink-dim">
         <span className="mb-1 block">{mixedWeight ? "Weight · mixed" : `Weight ${formatNum(keyNode.fontWeight)}`}</span>
         <div className="flex items-center gap-2">
-          <input type="range" className="range-phosphor min-w-0 flex-1" data-fill-range="type-weight" style={{ "--fill-percent": String(Math.max(0, Math.min(1, (keyNode.fontWeight - 400) / (800 - 400)))) } as CSSProperties} min={400} max={800} step={100} aria-label={mixedWeight ? "type weight mixed" : "type weight"} value={keyNode.fontWeight} onChange={(e) => { const next = Math.min(800, Math.max(400, Math.round(Number(e.target.value) / 100) * 100)); useDesign.getState().setTypeGhost({ fontWeight: next }); patch({ fontWeight: next }, false); }} onPointerUp={() => { useDesign.getState().setTypeGhost(null); useDesign.getState().commit(); }} onKeyUp={() => { if (useDesign.getState().typeGhost) { useDesign.getState().setTypeGhost(null); useDesign.getState().commit(); } }} onBlur={() => { if (useDesign.getState().typeGhost) { useDesign.getState().setTypeGhost(null); useDesign.getState().commit(); } }} onKeyDown={(e) => { const next = nextFromRangeKey(e, keyNode.fontWeight, 400, 800, 100); if (next != null) { const w = Math.min(800, Math.max(400, Math.round(next / 100) * 100)); useDesign.getState().setTypeGhost({ fontWeight: w }); patch({ fontWeight: w }, false); } }} />
-          <NumField className="field w-16 font-mono" value={keyNode.fontWeight} mixed={mixedWeight} min={400} max={800} aria-label="type weight" onCommit={(n) => patch({ fontWeight: Math.min(800, Math.max(400, Math.round(n / 100) * 100)) })} />
+          <input type="range" className="range-phosphor min-w-0 flex-1" data-fill-range="type-weight" style={{ "--fill-percent": String(Math.max(0, Math.min(1, (keyNode.fontWeight - 100) / (900 - 100)))) } as CSSProperties} min={100} max={900} step={100} aria-label={mixedWeight ? "type weight mixed" : "type weight"} value={keyNode.fontWeight} onChange={(e) => { const next = Math.min(900, Math.max(100, Math.round(Number(e.target.value) / 100) * 100)); useDesign.getState().setTypeGhost({ fontWeight: next }); patch({ fontWeight: next }, false); }} onPointerUp={() => { useDesign.getState().setTypeGhost(null); useDesign.getState().commit(); }} onKeyUp={() => { if (useDesign.getState().typeGhost) { useDesign.getState().setTypeGhost(null); useDesign.getState().commit(); } }} onBlur={() => { if (useDesign.getState().typeGhost) { useDesign.getState().setTypeGhost(null); useDesign.getState().commit(); } }} onKeyDown={(e) => { const next = nextFromRangeKey(e, keyNode.fontWeight, 100, 900, 100); if (next != null) { const w = Math.min(900, Math.max(100, Math.round(next / 100) * 100)); useDesign.getState().setTypeGhost({ fontWeight: w }); patch({ fontWeight: w }, false); } }} />
+          <NumField className="field w-16 font-mono" value={keyNode.fontWeight} mixed={mixedWeight} min={100} max={900} aria-label="type weight" onCommit={(n) => patch({ fontWeight: Math.min(900, Math.max(100, Math.round(n / 100) * 100)) })} />
         </div>
       </label>
       <label className="mt-2 block text-[11px] text-ink-dim">
@@ -247,7 +247,8 @@ export function MixedType({ nodes }: { nodes: TextNode[] }) {
           <NumField className="field w-16 font-mono" value={keyNode.lineHeight} mixed={mixedLeading} min={0.7} max={2} aria-label="type leading" onCommit={(n) => patch({ lineHeight: n })} />
         </div>
       </label>
-      <MixedAxisSliders nodes={nodes} patch={patchAxes} />
+      <TypeRhythmPreview node={keyNode} />
+            <MixedAxisSliders nodes={nodes} patch={patchAxes} />
       <div className="mt-2">
         <div className="mb-1 text-[11px] text-ink-dim">{mixedAlign ? "Align · mixed" : "Align"}</div>
         <div className="flex gap-1" role="group" aria-label={mixedAlign ? "type align mixed" : "type align"}>

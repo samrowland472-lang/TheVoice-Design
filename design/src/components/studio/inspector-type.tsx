@@ -1,12 +1,14 @@
 import { nextFromRangeKey } from "./range-keys";
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { CANVAS_FONTS, clampAxis, faceAxis } from "@/lib/design/fonts";
 import { paletteFromSrc, paletteName } from "@/lib/design/palette";
 import { bestInk, contrastRatio, solidHex, wcagLevel } from "@/lib/design/contrast";
 import { useDesign } from "@/lib/design/store";
+import { applyTypeGhost } from "@/lib/design/type-ghost";
 import type { Align, DesignNode, ImageNode, TextNode } from "@/lib/design/types";
 import { Field } from "./inspector-parts";
 import { NumField } from "./num-field";
+import { cn } from "@/lib/utils";
 
 export function TextFields({ node, hideType = false }: { node: TextNode; hideType?: boolean }) {
   const updateNodes = useDesign((s) => s.updateNodes);
@@ -45,8 +47,8 @@ export function TextFields({ node, hideType = false }: { node: TextNode; hideTyp
       </Field>
       <Field label={`Weight ${node.fontWeight}`}>
         <div className="flex items-center gap-2">
-          <input type="range" className="range-phosphor min-w-0 flex-1" data-fill-range="type-weight" style={{ "--fill-percent": String(Math.max(0, Math.min(1, (node.fontWeight - 400) / (800 - 400)))) } as CSSProperties} min={400} max={800} step={100} aria-label="type weight" value={node.fontWeight} onChange={(e) => { const next = Math.min(800, Math.max(400, Math.round(Number(e.target.value) / 100) * 100)); useDesign.getState().setTypeGhost({ fontWeight: next }); updateNodes([node.id], { fontWeight: next } as Partial<DesignNode>); }} onPointerUp={() => { useDesign.getState().setTypeGhost(null); useDesign.getState().commit(); }} onKeyUp={() => { if (useDesign.getState().typeGhost) { useDesign.getState().setTypeGhost(null); useDesign.getState().commit(); } }} onBlur={() => { if (useDesign.getState().typeGhost) { useDesign.getState().setTypeGhost(null); useDesign.getState().commit(); } }} onKeyDown={(e) => { const next = nextFromRangeKey(e, node.fontWeight, 400, 800, 100); if (next != null) { const w = Math.min(800, Math.max(400, Math.round(next / 100) * 100)); useDesign.getState().setTypeGhost({ fontWeight: w }); updateNodes([node.id], { fontWeight: w } as Partial<DesignNode>); } }} />
-          <NumField className="field w-16 font-mono" value={node.fontWeight} min={400} max={800} aria-label="type weight" onCommit={(n) => updateNodes([node.id], { fontWeight: Math.min(800, Math.max(400, Math.round(n / 100) * 100)) } as Partial<DesignNode>, true)} />
+          <input type="range" className="range-phosphor min-w-0 flex-1" data-fill-range="type-weight" style={{ "--fill-percent": String(Math.max(0, Math.min(1, (node.fontWeight - 100) / (900 - 100)))) } as CSSProperties} min={100} max={900} step={100} aria-label="type weight" value={node.fontWeight} onChange={(e) => { const next = Math.min(900, Math.max(100, Math.round(Number(e.target.value) / 100) * 100)); useDesign.getState().setTypeGhost({ fontWeight: next }); updateNodes([node.id], { fontWeight: next } as Partial<DesignNode>); }} onPointerUp={() => { useDesign.getState().setTypeGhost(null); useDesign.getState().commit(); }} onKeyUp={() => { if (useDesign.getState().typeGhost) { useDesign.getState().setTypeGhost(null); useDesign.getState().commit(); } }} onBlur={() => { if (useDesign.getState().typeGhost) { useDesign.getState().setTypeGhost(null); useDesign.getState().commit(); } }} onKeyDown={(e) => { const next = nextFromRangeKey(e, node.fontWeight, 100, 900, 100); if (next != null) { const w = Math.min(900, Math.max(100, Math.round(next / 100) * 100)); useDesign.getState().setTypeGhost({ fontWeight: w }); updateNodes([node.id], { fontWeight: w } as Partial<DesignNode>); } }} />
+          <NumField className="field w-16 font-mono" value={node.fontWeight} min={100} max={900} aria-label="type weight" onCommit={(n) => updateNodes([node.id], { fontWeight: Math.min(900, Math.max(100, Math.round(n / 100) * 100)) } as Partial<DesignNode>, true)} />
         </div>
       </Field>
       <Field label={`Tracking ${node.letterSpacing}`}>
@@ -61,7 +63,8 @@ export function TextFields({ node, hideType = false }: { node: TextNode; hideTyp
           <NumField className="field w-16 font-mono" value={node.lineHeight} min={0.7} max={2} aria-label="type leading" onCommit={(n) => updateNodes([node.id], { lineHeight: n } as Partial<DesignNode>, true)} />
         </div>
       </Field>
-      <Field label="Align">
+      <TypeRhythmPreview node={node} />
+            <Field label="Align">
         <div className="flex gap-1">
           {(["left", "center", "right"] as Align[]).map((a) => (
             <button key={a} type="button" className={`h-8 flex-1 rounded-[8px] border text-xs capitalize ${node.align === a ? "border-phosphor text-phosphor" : "border-border text-ink-dim"}`} onClick={() => updateNodes([node.id], { align: a } as Partial<DesignNode>, true)}>{a}</button>
@@ -91,6 +94,149 @@ export function CopyMeter({ text }: { text: string }) {
       <span>
         {words} {words === 1 ? "word" : "words"} · {lines} {lines === 1 ? "line" : "lines"}
       </span>
+    </div>
+  );
+}
+
+
+export function TypeRhythmPreview({ node }: { node: TextNode }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const typeGhost = useDesign((s) => s.typeGhost);
+  const showPerGlyphTicks = useDesign((s) => s.showPerGlyphTicks);
+  const setShowPerGlyphTicks = useDesign((s) => s.setShowPerGlyphTicks);
+  const ghosted = applyTypeGhost(node, typeGhost);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = 220;
+    const cssH = 36;
+    canvas.width = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+    canvas.style.width = `${cssW}px`;
+    canvas.style.height = `${cssH}px`;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    const phosphor = "rgba(63,198,255,0.85)";
+    const phosphorSoft = "rgba(63,198,255,0.35)";
+    const y = cssH * 0.62;
+    const left = 6;
+    const right = cssW - 6;
+
+    ctx.strokeStyle = phosphor;
+    ctx.lineWidth = typeGhost?.fontWeight != null ? 1.8 : 1.15;
+    ctx.beginPath();
+    ctx.moveTo(left, y);
+    ctx.lineTo(right, y);
+    ctx.stroke();
+
+    // Left and right baseline ticks
+    const tickH = 7;
+    ctx.beginPath();
+    ctx.moveTo(left, y - tickH);
+    ctx.lineTo(left, y + tickH * 0.35);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(right, y - tickH);
+    ctx.lineTo(right, y + tickH * 0.35);
+    ctx.stroke();
+
+    // Mid-line center tick
+    const midX = (left + right) / 2;
+    const midTick = 9;
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(midX, y - midTick / 2);
+    ctx.lineTo(midX, y + midTick / 2);
+    ctx.stroke();
+
+    // Density marks — prefer leading ghost spacing, else size
+    const size = ghosted.fontSize;
+    const lineH = ghosted.lineHeight * size;
+    const densityStep = typeGhost?.lineHeight != null
+      ? Math.max(lineH * 0.42, 11)
+      : Math.max(size * 0.55, 9);
+    if (densityStep > 5 && densityStep < (right - left) * 0.42) {
+      ctx.strokeStyle = phosphorSoft;
+      ctx.lineWidth = 0.75;
+      for (let x = left + densityStep; x < right - densityStep * 0.35; x += densityStep) {
+        if (Math.abs(x - midX) < densityStep * 0.32) continue;
+        ctx.beginPath();
+        ctx.moveTo(x, y - 2.8);
+        ctx.lineTo(x, y + 2.8);
+        ctx.stroke();
+      }
+    }
+
+    // Tracking / weight density marks — spaced by measured average advance of a sample
+    // or per-glyph when the preference is on (independent of sample length, capped for the strip).
+    if (typeGhost?.letterSpacing != null || typeGhost?.fontWeight != null) {
+      ctx.save();
+      ctx.font = `${ghosted.fontWeight} ${Math.min(size, 28)}px ${ghosted.fontFamily}`;
+      ctx.letterSpacing = "0px";
+      const sample = (node.text || "Type").slice(0, 24) || "A";
+      const tracking = ghosted.letterSpacing || 0;
+      const SHORT = 8;
+      const PER_GLYPH_MAX = 24;
+      const usePerGlyph = showPerGlyphTicks ? sample.length <= PER_GLYPH_MAX : sample.length <= SHORT;
+      ctx.strokeStyle = phosphorSoft;
+      ctx.lineWidth = 0.7;
+      if (usePerGlyph) {
+        let cum = 0;
+        for (let g = 0; g < sample.length; g++) {
+          const chW = ctx.measureText(sample[g]).width;
+          const tickX = left + 4 + cum + chW * 0.5;
+          if (tickX > left && tickX < right) {
+            ctx.beginPath();
+            ctx.moveTo(tickX, y - 4.2);
+            ctx.lineTo(tickX, y + 1.2);
+            ctx.stroke();
+          }
+          cum += chW + (g < sample.length - 1 ? tracking * 0.85 : 0);
+        }
+      } else {
+        const glyphW = ctx.measureText(sample).width;
+        const advance = Math.max(
+          6,
+          glyphW / Math.max(1, sample.length) + tracking * 0.85,
+        );
+        for (let x = left + advance * 0.35; x < right - 3; x += advance) {
+          ctx.beginPath();
+          ctx.moveTo(x, y - 4.2);
+          ctx.lineTo(x, y + 1.2);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+  }, [node, typeGhost, ghosted.fontSize, ghosted.lineHeight, ghosted.letterSpacing, ghosted.fontWeight, showPerGlyphTicks]);
+
+  return (
+    <div className="mt-2">
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <div className="text-[10px] text-ink-dim">Rhythm</div>
+        <button
+          type="button"
+          className={cn(
+            "h-5 rounded-[4px] px-1.5 text-[9px] tabular-nums",
+            showPerGlyphTicks ? "bg-phosphor/15 text-phosphor" : "border border-border text-ink-dim",
+          )}
+          aria-pressed={showPerGlyphTicks}
+          title="Show per-glyph ticks on the canvas and rhythm strip (independent of line length)"
+          onClick={() => setShowPerGlyphTicks(!showPerGlyphTicks)}
+        >
+          Glyph
+        </button>
+      </div>
+      <canvas
+        ref={canvasRef}
+        className="w-full max-w-[220px] rounded-[6px] border border-border/50 bg-ground/30"
+        aria-hidden
+      />
     </div>
   );
 }

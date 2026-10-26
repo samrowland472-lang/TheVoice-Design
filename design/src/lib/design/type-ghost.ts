@@ -1,4 +1,4 @@
-import { layoutTextLines } from "./text-layout";
+import { layoutTextLines, measureTracked } from "./text-layout";
 import type { DesignNode, TextNode } from "./types";
 import { isText } from "./types";
 
@@ -22,16 +22,20 @@ export function applyTypeGhost(n: TextNode, ghost: TypeGhost): TextNode {
 
 /**
  * Draw phosphor rhythm guides for selected text layers while type properties are being scrubbed.
- * Horizontal lines mark leading intervals; short vertical ticks approximate tracking density.
+ * Horizontal lines mark leading intervals; tracking density marks follow the measured average advance of each line.
  * Weight ghosts update the measured advance and may thicken the leading lines.
  * Size and leading ghosts add baseline ticks at the left and right of each line.
- * Size ghosts also add a mid-line center tick and intermediate density marks along each baseline.
+ * Size and leading ghosts also add a mid-line center tick and intermediate density marks along each baseline.
+ * Leading density spacing follows the ghosted line height so the vertical rhythm is readable while scrubbing.
+ * Tracking ghosts on short lines (≤8 glyphs) draw per-glyph advance ticks aligned to the text.
+ * When preferPerGlyph is true, per-glyph ticks are used for all lines up to a safe length, independent of the short-line cutoff.
  */
 export function drawTypeRhythmGhosts(
   ctx: CanvasRenderingContext2D,
   nodes: DesignNode[],
   ghost: NonNullable<TypeGhost>,
   zoom: number,
+  preferPerGlyph = true,
 ) {
   const phosphor = "rgba(63,198,255,0.85)";
   const phosphorSoft = "rgba(63,198,255,0.35)";
@@ -114,22 +118,86 @@ export function drawTypeRhythmGhosts(
       }
     }
 
-    // Tracking ticks — approximate density using average advance.
+    // Leading ghosts: mid-line center tick + density marks spaced by the ghosted line height
+    if (ghost.lineHeight != null) {
+      const midTick = Math.max(5 / zoom, 3.5);
+      const densityStep = Math.max(lineHeight * 0.65, 10 / zoom);
+      ctx.lineWidth = Math.max(1.1 / zoom, 0.8);
+      for (let i = 0; i < lines.length; i++) {
+        const y = n.y + startY + i * lineHeight + n.fontSize * 0.8;
+        const midX = n.x + n.w / 2;
+        ctx.beginPath();
+        ctx.moveTo(midX, y - midTick / 2);
+        ctx.lineTo(midX, y + midTick / 2);
+        ctx.stroke();
+        if (densityStep > 5 / zoom && densityStep < n.w * 0.45) {
+          ctx.strokeStyle = phosphorSoft;
+          ctx.lineWidth = Math.max(0.7 / zoom, 0.5);
+          for (let x = n.x + densityStep; x < n.x + n.w - densityStep * 0.4; x += densityStep) {
+            if (Math.abs(x - midX) < densityStep * 0.35) continue;
+            ctx.beginPath();
+            ctx.moveTo(x, y - midTick * 0.35);
+            ctx.lineTo(x, y + midTick * 0.35);
+            ctx.stroke();
+          }
+          ctx.strokeStyle = phosphor;
+          ctx.lineWidth = Math.max(1.1 / zoom, 0.8);
+        }
+      }
+    }
+
+    // Tracking density marks — spaced by the measured average advance of the line content.
     // Shown while scrubbing tracking or weight (weight changes measured advance).
-    if ((ghost.letterSpacing != null || ghost.fontWeight != null) && lines[0]) {
-      const sample = lines[0].slice(0, 24) || "A";
-      const advance = (measure(sample) / Math.max(1, sample.length)) + (n.letterSpacing || 0);
-      if (advance > 2 / zoom) {
-        ctx.strokeStyle = phosphorSoft;
-        ctx.lineWidth = Math.max(0.8 / zoom, 0.6);
-        const count = Math.min(48, Math.floor(n.w / advance));
-        for (let k = 0; k <= count; k++) {
-          const x = n.x + k * advance;
-          if (x > n.x + n.w) break;
-          ctx.beginPath();
-          ctx.moveTo(x, n.y + startY);
-          ctx.lineTo(x, n.y + startY + tickH);
-          ctx.stroke();
+    // Drawn near each baseline so they follow the actual text density more closely than a single top row.
+    // Per-glyph advance ticks (aligned to the line’s text-align) are used for short lines by default,
+    // or for any line up to 32 glyphs when preferPerGlyph is on, so the rhythm stays precise independent of length.
+    if ((ghost.letterSpacing != null || ghost.fontWeight != null) && lines.length) {
+      ctx.strokeStyle = phosphorSoft;
+      ctx.lineWidth = Math.max(0.75 / zoom, 0.55);
+      const midTick = Math.max(3.2 / zoom, 2.4);
+      const SHORT = 8;
+      const PER_GLYPH_MAX = 32;
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i] || "";
+        if (!line) continue;
+        const y = n.y + startY + i * lineHeight + n.fontSize * 0.8;
+        const tracking = n.letterSpacing || 0;
+        const usePerGlyph = preferPerGlyph ? line.length <= PER_GLYPH_MAX : line.length <= SHORT;
+
+        if (usePerGlyph) {
+          // Per-glyph advance ticks
+          const lineW = measureTracked(line, measure, tracking);
+          let startX = n.x;
+          if (n.align === "center") startX = n.x + Math.max(0, (n.w - lineW) / 2);
+          else if (n.align === "right") startX = n.x + Math.max(0, n.w - lineW);
+          let cum = 0;
+          for (let g = 0; g < line.length; g++) {
+            const chW = measure(line[g]);
+            const tickX = startX + cum + chW * 0.5;
+            if (tickX > n.x && tickX < n.x + n.w) {
+              ctx.beginPath();
+              ctx.moveTo(tickX, y - midTick);
+              ctx.lineTo(tickX, y + midTick * 0.4);
+              ctx.stroke();
+            }
+            cum += chW + (g < line.length - 1 ? tracking : 0);
+          }
+        } else {
+          // Average advance for longer lines
+          const sample = line.slice(0, 32) || "A";
+          const glyphW = measure(sample);
+          const advance = Math.max(
+            2 / zoom,
+            glyphW / Math.max(1, sample.length) + tracking,
+          );
+          if (advance < 2.2 / zoom) continue;
+          const startX = n.x + Math.min(advance * 0.35, 8 / zoom);
+          for (let x = startX; x < n.x + n.w - advance * 0.2; x += advance) {
+            ctx.beginPath();
+            ctx.moveTo(x, y - midTick);
+            ctx.lineTo(x, y + midTick * 0.4);
+            ctx.stroke();
+          }
         }
       }
     }
