@@ -1,6 +1,12 @@
 # The Voice Design — Improvement Loop
 
 ## Done
+- Type rhythm overlay: optional weight-specific tick thickness (Wt toggle, persisted). While scrubbing weight, canvas and inspector Rhythm strip ticks scale thickness and height with the ghosted font weight (relative to 400). Direction and spacing unchanged. Verified typecheck, build, and browser smoke.
+- Path point inspector: canvas tangent length numbers are now click-to-edit (floating phosphor input). Clicking a live length on the canvas opens an exact number field; committing scales the handle while preserving direction (or seeds a horizontal arm). Mirror is honored. Len tooltip mentions canvas click-to-edit. Verified typecheck, build, and browser smoke.
+- Path point inspector: length readouts next to In/Out handles are now click-to-edit exact numbers (NumField). Setting a length scales the handle while preserving direction (or seeds a horizontal arm from zero). Mirror is honored. Len tooltip mentions the click-to-edit. Verified typecheck, build, and browser smoke.
+- Path point inspector: while Len is on and a handle (In or Out) is selected, Arrow keys nudge its length by 1 px (Shift for 10). Direction is preserved, mirror is honored, and numbers update live on the canvas and in the row. Len tooltip mentions the shortcut. Verified typecheck, build, and browser smoke.
+- Layers Type quick strip: Alt+T cycles focus (size → weight → tracking → leading) while the Layers panel is focused. Opens the next number editor pre-filled, commits the previous field, and flashes on remembered values. Tooltip mentions the shortcut.
+- Path point inspector Len toggle now also shows live rounded tangent length numbers in the point row next to the In and Out handle fields (phosphor tabular mono). Lengths match the canvas numbers and update as handles change. Len button tooltip mentions both canvas and row.
 - Path point inspector now has a Len toggle (persisted in localStorage) that shows live phosphor tangent length numbers on the canvas next to the active in/out handle while it is focused or dragged. Numbers follow the measured handle length and update as the arm changes.
 - Type quick strip collapses and expands with Shift+T when the Layers panel is focused (no modifier conflicts). The chevron button title mentions the shortcut. Collapse state still persists in localStorage.
 - Type quick strip is now collapsible (phosphor chevron, state remembered in localStorage). When collapsed, the size / weight / tracking / leading / family mini badges stay available on hover or focus of the strip. Layer-row type badges are hover-only (always visible when the layer is selected), independent of strip state.
@@ -58,8 +64,10 @@
 
 - Path point inspector Mirror state is now remembered per point (node + index + hole) across reloads via localStorage. Toggling Mirror on a point keeps it on when you return to that point, and the opposite handle stays mirrored while you edit either arm.
 
+- Layers Type quick strip Alt+T cycle now includes family (size → weight → tracking → leading → family). Shift+Alt+T cycles in reverse. Family opens its select; other fields still commit on cycle. Tooltip mentions both directions.
+
 ## Iteration
-2026-10-26 14:05 GMT — Path point inspector Mirror state remembered per point via localStorage. Verified typecheck, build, and browser smoke.
+2026-10-27 14:10 GMT — Type rhythm overlay: optional Wt tick thickness. Ticks scale with ghosted weight on canvas and rhythm strip. Verified typecheck, build, and browser smoke.
 ## Next recommended
-- Layers panel: optional keyboard shortcut to cycle type-strip focus (size → weight → tracking → leading).
-- Path point inspector: show current tangent length numbers in the point row (not only on canvas) when Len is on.
+- Type rhythm overlay: optional glyph density scale (beyond weight thickness).
+- Path inspector: multi-point length average or bulk handle length set.
