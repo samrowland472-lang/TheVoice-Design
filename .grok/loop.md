@@ -1,6 +1,9 @@
 # The Voice Design — Improvement Loop
 
 ## Done
+- Path inspector: per-ring handle length averages and bulk set. Outer and each hole show their own average length plus a compact NumField that sets only that ring's handles (direction preserved, zero seeds horizontal, Mirror honored). Global All bulk remains. Verified typecheck, build, and browser smoke.
+- Type rhythm overlay: density factor visual density preview thumbnail. When Den is on, a compact phosphor SVG thumbnail beside the factor slider and NumField shows a live sample of density ticks (spacing scales with 1/factor). Tooltip mentions the preview. Verified typecheck, build, and browser smoke.
+- Path inspector: bulk handle length. Avg shows the mean length of every existing in/out handle (outer path + holes). A compact NumField beside it sets all handle lengths to an exact value: direction is preserved, zero handles seed a horizontal arm, and per-point Mirror is honored. Verified typecheck, build, and browser smoke.
 - Type rhythm overlay: density factor click-to-edit exact number. When Den is on, a compact NumField sits beside the factor slider. Click it, type a value (0.4–2.5), Enter/blur commits and clamps. Slider and keyboard nudge unchanged. Tooltip mentions exact entry. Verified typecheck, build, and browser smoke.
 - Type rhythm overlay: density factor keyboard nudge. While the factor slider is focused, Arrow keys adjust the density scale (0.05 step, Shift for 0.25). Home/End/PageUp/PageDown also work. Tooltip and Den button mention the shortcut. Verified typecheck, build, and browser smoke.
 - Type rhythm overlay: density scale factor slider (0.4–2.5, persisted). When Den is on, a compact range next to the toggle multiplies the size-based densification on both the canvas ghosts and the Type inspector Rhythm strip. Higher factor = denser ticks. Verified typecheck, build, and browser smoke.
@@ -70,8 +73,10 @@
 
 - Layers Type quick strip Alt+T cycle now includes family (size → weight → tracking → leading → family). Shift+Alt+T cycles in reverse. Family opens its select; other fields still commit on cycle. Tooltip mentions both directions.
 
+- Path inspector: multi-select points (shift-click) for bulk length on the selected set only. Shift-click point headers in the inspector or anchors on the canvas to build a selection. When two or more points are selected a Sel average and NumField appear; committing sets handle lengths only on those points (direction preserved, zero seeds horizontal, Mirror honored). Single clicks still focus one point. Verified typecheck, build, and browser smoke.
+
 ## Iteration
-2026-10-28 08:03 GMT — Type rhythm overlay: density factor click-to-edit exact number (NumField beside slider). Verified typecheck, build, and browser smoke.
+2026-10-29 01:10 GMT — Path inspector: multi-select points (shift-click) for bulk length on the selected set only. Verified typecheck, build, and browser smoke.
 ## Next recommended
-- Path inspector: multi-point length average or bulk handle length set.
-- Type rhythm overlay: density factor persisted range memory across sessions (already is) or visual density preview thumbnail.
+- Type rhythm overlay: density factor live canvas ghost preview on thumbnail hover.
+- Path inspector: multi-select points keyboard bulk length nudge.
