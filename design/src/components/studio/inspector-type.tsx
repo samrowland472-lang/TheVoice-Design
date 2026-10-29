@@ -100,7 +100,7 @@ export function CopyMeter({ text }: { text: string }) {
 
 
 
-function DensityFactorThumb({ factor }: { factor: number }) {
+function DensityFactorThumb({ factor, onHoverStart, onHoverEnd, onDoubleClick }: { factor: number; onHoverStart?: () => void; onHoverEnd?: () => void; onDoubleClick?: () => void }) {
   const f = Math.max(0.4, Math.min(2.5, factor || 1));
   const base = 7;
   const step = Math.max(2.4, base / f);
@@ -115,10 +115,13 @@ function DensityFactorThumb({ factor }: { factor: number }) {
       width="48"
       height="16"
       viewBox="0 0 48 16"
-      className="shrink-0 rounded-[3px] border border-border/40 bg-ground/40"
+      className="shrink-0 rounded-[3px] border border-border/40 bg-ground/40 cursor-help"
       aria-hidden
+      onMouseEnter={onHoverStart}
+      onMouseLeave={onHoverEnd}
+      onDoubleClick={onDoubleClick}
     >
-      <title>{`Density preview ×${f.toFixed(2)}`}</title>
+      <title>{`Density preview ×${f.toFixed(2)}. Hover to preview on canvas. Double-click to reset factor to 1.`}</title>
       <line x1="1" y1="8" x2="47" y2="8" stroke="rgba(63,198,255,0.25)" strokeWidth="0.6" />
       {ticks.map((tx, i) => (
         <line
@@ -290,7 +293,7 @@ export function TypeRhythmPreview({ node }: { node: TextNode }) {
               showGlyphDensityScale ? "bg-phosphor/15 text-phosphor" : "border border-border text-ink-dim",
             )}
             aria-pressed={showGlyphDensityScale}
-            title="Scale rhythm density marks with font size (denser for larger type) on canvas and strip. Factor slider multiplies the densification (Arrow keys while focused; Shift for larger nudge). Exact number and density preview thumbnail beside the slider."
+            title="Scale rhythm density marks with font size (denser for larger type) on canvas and strip. Factor slider multiplies the densification (Arrow keys while focused; Shift for larger nudge). Exact number and density preview thumbnail beside the slider. Scrub the factor to preview density ghosts live on the canvas. Hover the thumbnail to preview density ghosts on the canvas. Double-click the slider or thumbnail to reset the factor to 1."
             onClick={() => setShowGlyphDensityScale(!showGlyphDensityScale)}
           >
             Den
@@ -303,11 +306,40 @@ export function TypeRhythmPreview({ node }: { node: TextNode }) {
                 max={2.5}
                 step={0.05}
                 value={glyphDensityScaleFactor}
-                onChange={(e) => setGlyphDensityScaleFactor(Number(e.target.value))}
+                onChange={(e) => {
+                  const next = Number(e.target.value);
+                  setGlyphDensityScaleFactor(next);
+                  // Live canvas density preview while scrubbing the factor
+                  if (!useDesign.getState().typeGhost) {
+                    useDesign.getState().setTypeGhost({ fontSize: node.fontSize });
+                  }
+                }}
+                onPointerUp={() => {
+                  const g = useDesign.getState().typeGhost;
+                  if (g && g.fontSize === node.fontSize && g.letterSpacing == null && g.lineHeight == null && g.fontWeight == null) {
+                    useDesign.getState().setTypeGhost(null);
+                  }
+                }}
+                onBlur={() => {
+                  const g = useDesign.getState().typeGhost;
+                  if (g && g.fontSize === node.fontSize && g.letterSpacing == null && g.lineHeight == null && g.fontWeight == null) {
+                    useDesign.getState().setTypeGhost(null);
+                  }
+                }}
+                onDoubleClick={() => {
+                  setGlyphDensityScaleFactor(1);
+                  const g = useDesign.getState().typeGhost;
+                  if (g && g.fontSize === node.fontSize && g.letterSpacing == null && g.lineHeight == null && g.fontWeight == null) {
+                    useDesign.getState().setTypeGhost(null);
+                  }
+                }}
                 onKeyDown={(e) => {
                   const special = nextFromRangeKey(e, glyphDensityScaleFactor, 0.4, 2.5, 0.05);
                   if (special != null) {
                     setGlyphDensityScaleFactor(special);
+                    if (!useDesign.getState().typeGhost) {
+                      useDesign.getState().setTypeGhost({ fontSize: node.fontSize });
+                    }
                     return;
                   }
                   const dir =
@@ -318,9 +350,12 @@ export function TypeRhythmPreview({ node }: { node: TextNode }) {
                   const step = e.shiftKey ? 0.25 : 0.05;
                   const next = Math.min(2.5, Math.max(0.4, glyphDensityScaleFactor + dir * step));
                   setGlyphDensityScaleFactor(next);
+                  if (!useDesign.getState().typeGhost) {
+                    useDesign.getState().setTypeGhost({ fontSize: node.fontSize });
+                  }
                 }}
                 className="h-1 w-12 cursor-pointer accent-phosphor"
-                title={`Density factor ×${glyphDensityScaleFactor.toFixed(2)} (higher = denser). Arrow keys nudge (Shift for larger). Exact number beside.`}
+                title={`Density factor ×${glyphDensityScaleFactor.toFixed(2)} (higher = denser). Arrow keys nudge (Shift for larger). Exact number beside. Scrub to preview density ghosts live on the canvas. Double-click to reset to 1.`}
                 aria-label="Density scale factor"
               />
               <NumField
@@ -331,7 +366,26 @@ export function TypeRhythmPreview({ node }: { node: TextNode }) {
                 className="h-5 w-10 shrink-0 rounded-[4px] border border-border/70 bg-surface/40 px-0.5 text-center font-mono text-[9px] tabular-nums text-phosphor"
                 onCommit={(n) => setGlyphDensityScaleFactor(n)}
               />
-              <DensityFactorThumb factor={glyphDensityScaleFactor} />
+              <DensityFactorThumb
+                factor={glyphDensityScaleFactor}
+                onHoverStart={() => {
+                  if (useDesign.getState().typeGhost) return;
+                  useDesign.getState().setTypeGhost({ fontSize: node.fontSize });
+                }}
+                onHoverEnd={() => {
+                  const g = useDesign.getState().typeGhost;
+                  if (g && g.fontSize === node.fontSize && g.letterSpacing == null && g.lineHeight == null && g.fontWeight == null) {
+                    useDesign.getState().setTypeGhost(null);
+                  }
+                }}
+                onDoubleClick={() => {
+                  setGlyphDensityScaleFactor(1);
+                  const g = useDesign.getState().typeGhost;
+                  if (g && g.fontSize === node.fontSize && g.letterSpacing == null && g.lineHeight == null && g.fontWeight == null) {
+                    useDesign.getState().setTypeGhost(null);
+                  }
+                }}
+              />
             </>
           )}
           <button
