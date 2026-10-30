@@ -5,6 +5,7 @@ import {
   selectPathHole,
   setHoleFillRule,
   setPathClosed,
+  setPathPointHandles,
 } from "@/lib/design/path-actions";
 import {
   offsetSelectedPath,
@@ -59,33 +60,168 @@ import {
 } from "@/lib/design/path-prev-hole-tab";
 import { useDesign } from "@/lib/design/store";
 import type { PathNode, PathPoint } from "@/lib/design/types";
-import { mirrorHandle } from "@/lib/design/path-curve";
+import { mirrorHandle, autoSmoothPoint } from "@/lib/design/path-curve";
 import { cn } from "@/lib/utils";
 import { Section } from "./inspector-parts";
 import { NumField } from "./num-field";
 import { PointRow } from "./path-point-row";
 
 
-function avgHandleLength(node: PathNode): number {
+function collectHandleLengths(pts: PathPoint[]): number[] {
   const lengths: number[] = [];
-  const collect = (pts: PathPoint[]) => {
-    for (const p of pts) {
-      if (p.in) lengths.push(Math.hypot(p.in.x, p.in.y));
-      if (p.out) lengths.push(Math.hypot(p.out.x, p.out.y));
-    }
-  };
-  collect(node.points);
-  (node.holes ?? []).forEach(collect);
+  for (const p of pts) {
+    if (p.in) lengths.push(Math.hypot(p.in.x, p.in.y));
+    if (p.out) lengths.push(Math.hypot(p.out.x, p.out.y));
+  }
+  return lengths;
+}
+
+function avgHandleLength(node: PathNode): number {
+  const lengths = [
+    ...collectHandleLengths(node.points),
+    ...(node.holes ?? []).flatMap(collectHandleLengths),
+  ];
   if (lengths.length === 0) return 0;
   return Math.round(lengths.reduce((a, b) => a + b, 0) / lengths.length);
 }
 
-function bulkSetHandleLength(node: PathNode, target: number) {
+function avgHandleLengthForSelected(node: PathNode, selected: { index: number; hole?: number }[]): number {
+  const lengths: number[] = [];
+  for (const sel of selected) {
+    const pts = sel.hole == null ? node.points : (node.holes?.[sel.hole] ?? []);
+    const p = pts[sel.index];
+    if (!p) continue;
+    if (p.in) lengths.push(Math.hypot(p.in.x, p.in.y));
+    if (p.out) lengths.push(Math.hypot(p.out.x, p.out.y));
+  }
+  if (lengths.length === 0) return 0;
+  return Math.round(lengths.reduce((a, b) => a + b, 0) / lengths.length);
+}
+
+
+function countMirroredSelected(node: PathNode, selected: { index: number; hole?: number }[], mirrorPoints: Record<string, boolean> = {}): { on: number; total: number } {
+  let on = 0;
+  let total = 0;
+  for (const sel of selected) {
+    total++;
+    const key = `${node.id}:${sel.hole ?? ""}:${sel.index}`;
+    if (mirrorPoints[key]) on++;
+  }
+  return { on, total };
+}
+
+function bulkSetMirror(node: PathNode, selected: { index: number; hole?: number }[], value: boolean) {
+  const s = useDesign.getState();
+  const setMirrorPoint = s.setMirrorPoint;
+  for (const sel of selected) {
+    const key = `${node.id}:${sel.hole ?? ""}:${sel.index}`;
+    setMirrorPoint(key, value);
+    if (!value) continue;
+    const pts = sel.hole == null ? node.points : (node.holes?.[sel.hole] ?? []);
+    const p = pts[sel.index];
+    if (!p) continue;
+    const src = p.in ?? p.out;
+    if (!src) continue;
+    const mirrored = mirrorHandle(src);
+    if (p.in) {
+      setPathPointHandles(node.id, sel.index, { out: mirrored }, sel.hole);
+    } else if (p.out) {
+      setPathPointHandles(node.id, sel.index, { in: mirrored }, sel.hole);
+    }
+  }
+}
+
+function countSmoothSelected(node: PathNode, selected: { index: number; hole?: number }[]): { on: number; total: number } {
+  let on = 0;
+  let total = 0;
+  for (const sel of selected) {
+    total++;
+    const pts = sel.hole == null ? node.points : (node.holes?.[sel.hole] ?? []);
+    const p = pts[sel.index];
+    if (p && p.smooth !== false) on++;
+  }
+  return { on, total };
+}
+
+function bulkSetSmooth(node: PathNode, selected: { index: number; hole?: number }[], smooth: boolean) {
+  const s = useDesign.getState();
+  const byHole = new Map<number | null, Set<number>>();
+  for (const p of selected) {
+    const h = p.hole ?? null;
+    if (!byHole.has(h)) byHole.set(h, new Set());
+    byHole.get(h)!.add(p.index);
+  }
+  const applyToRing = (pts: PathPoint[], hole: number | null, indices: Set<number>) => {
+    const closed = hole == null ? node.closed : true;
+    return pts.map((p, index) => {
+      if (!indices.has(index)) return p;
+      if (smooth) return autoSmoothPoint(pts, index, closed);
+      return { ...p, smooth: false };
+    });
+  };
+  const nextPoints = byHole.has(null) ? applyToRing(node.points, null, byHole.get(null)!) : node.points;
+  const nextHoles = (node.holes ?? []).map((ring, h) =>
+    byHole.has(h) ? applyToRing(ring, h, byHole.get(h)!) : ring
+  );
+  s.commit();
+  s.replaceNode(node.id, { ...node, points: nextPoints, holes: nextHoles.length ? nextHoles : node.holes }, false);
+}
+
+function bulkSetHandleAxis(node: PathNode, selected: { index: number; hole?: number }[], axis: "h" | "v") {
+  const s = useDesign.getState();
+  const mirrorPoints = s.mirrorPoints ?? {};
+  const byHole = new Map<number | null, Set<number>>();
+  for (const p of selected) {
+    const h = p.hole ?? null;
+    if (!byHole.has(h)) byHole.set(h, new Set());
+    byHole.get(h)!.add(p.index);
+  }
+  const applyToRing = (pts: PathPoint[], hole: number | null, indices: Set<number>) => {
+    return pts.map((p, index) => {
+      if (!indices.has(index)) return p;
+      const key = `${node.id}:${hole ?? ""}:${index}`;
+      const mir = !!mirrorPoints[key];
+      const axisify = (h: { x: number; y: number } | null | undefined) => {
+        if (!h) return h;
+        const len = Math.hypot(h.x, h.y);
+        if (len < 0.5) return h;
+        return axis === "h" ? { x: Math.sign(h.x || 1) * len, y: 0 } : { x: 0, y: Math.sign(h.y || 1) * len };
+      };
+      let nextIn = axisify(p.in);
+      let nextOut = axisify(p.out);
+      if (mir) {
+        if (nextIn && !nextOut) nextOut = mirrorHandle(nextIn);
+        else if (nextOut && !nextIn) nextIn = mirrorHandle(nextOut);
+        else if (nextIn && nextOut) {
+          // prefer in as source for consistency
+          nextOut = mirrorHandle(nextIn);
+        }
+      }
+      return { ...p, in: nextIn, out: nextOut };
+    });
+  };
+  const nextPoints = byHole.has(null) ? applyToRing(node.points, null, byHole.get(null)!) : node.points;
+  const nextHoles = (node.holes ?? []).map((ring, h) =>
+    byHole.has(h) ? applyToRing(ring, h, byHole.get(h)!) : ring
+  );
+  s.commit();
+  s.replaceNode(node.id, { ...node, points: nextPoints, holes: nextHoles.length ? nextHoles : node.holes }, false);
+}
+
+function avgHandleLengthForRing(node: PathNode, hole: number | null): number {
+  const pts = hole == null ? node.points : (node.holes?.[hole] ?? []);
+  const lengths = collectHandleLengths(pts);
+  if (lengths.length === 0) return 0;
+  return Math.round(lengths.reduce((a, b) => a + b, 0) / lengths.length);
+}
+
+function bulkSetHandleLength(node: PathNode, target: number, scope: "all" | "outer" | number | { index: number; hole?: number }[] = "all") {
   const len = Math.max(0, Math.round(target));
   const s = useDesign.getState();
   const mirrorPoints = s.mirrorPoints ?? {};
-  const applyToRing = (pts: PathPoint[], hole?: number) =>
+  const applyToRing = (pts: PathPoint[], hole?: number, onlyIndices?: Set<number>) =>
     pts.map((p, index) => {
+      if (onlyIndices && !onlyIndices.has(index)) return p;
       const mirrorKey = `${node.id}:${hole ?? ""}:${index}`;
       const mir = !!mirrorPoints[mirrorKey];
       const scaleOrSeed = (h: { x: number; y: number } | null | undefined) => {
@@ -111,8 +247,27 @@ function bulkSetHandleLength(node: PathNode, target: number) {
       }
       return { ...p, in: nextIn, out: nextOut };
     });
-  const nextPoints = applyToRing(node.points);
-  const nextHoles = (node.holes ?? []).map((ring, h) => applyToRing(ring, h));
+  if (Array.isArray(scope)) {
+    const byHole = new Map<number | null, Set<number>>();
+    for (const p of scope) {
+      const h = p.hole ?? null;
+      if (!byHole.has(h)) byHole.set(h, new Set());
+      byHole.get(h)!.add(p.index);
+    }
+    const nextPoints = byHole.has(null) ? applyToRing(node.points, undefined, byHole.get(null)) : node.points;
+    const nextHoles = (node.holes ?? []).map((ring, h) =>
+      byHole.has(h) ? applyToRing(ring, h, byHole.get(h)) : ring
+    );
+    s.commit();
+    s.replaceNode(node.id, { ...node, points: nextPoints, holes: nextHoles.length ? nextHoles : node.holes }, false);
+    return;
+  }
+  const applyOuter = scope === "all" || scope === "outer";
+  const nextPoints = applyOuter ? applyToRing(node.points) : node.points;
+  const nextHoles = (node.holes ?? []).map((ring, h) => {
+    const apply = scope === "all" || scope === h;
+    return apply ? applyToRing(ring, h) : ring;
+  });
   s.commit();
   s.replaceNode(node.id, { ...node, points: nextPoints, holes: nextHoles.length ? nextHoles : node.holes }, false);
 }
@@ -121,6 +276,8 @@ export function PathFields({ node }: { node: PathNode }) {
   const pointListRef = useRef<HTMLDivElement>(null);
   const holeListRef = useRef<HTMLDivElement>(null);
   const hit = useDesign((s) => s.pathEditHit);
+  const pointSel = useDesign((s) => s.pathPointSelection ?? []);
+  const mirrorPoints = useDesign((s) => s.mirrorPoints);
   const holes = node.holes ?? [];
 
   useEffect(() => {
@@ -271,7 +428,28 @@ export function PathFields({ node }: { node: PathNode }) {
     return () => document.removeEventListener("keydown", onKey, true);
   }, []);
 
+  useEffect(() => {
+    if (pointSel.length < 2) return;
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key !== "ArrowUp" && e.key !== "ArrowDown" && e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      const step = e.shiftKey ? 10 : 1;
+      const dir = e.key === "ArrowUp" || e.key === "ArrowRight" ? 1 : -1;
+      const cur = avgHandleLengthForSelected(node, pointSel);
+      const next = Math.max(0, cur + dir * step);
+      bulkSetHandleLength(node, next, pointSel);
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [pointSel, node]);
+
   const activeOuter = hit && hit.hole == null ? hit.index : -1;
+  const isSelected = (index: number, hole?: number) =>
+    pointSel.some((p) => p.index === index && (p.hole ?? null) === (hole ?? null));
 
   return (
     <Section title="Path">
@@ -322,22 +500,104 @@ export function PathFields({ node }: { node: PathNode }) {
           </button>
         </div>
         <div className="flex items-center gap-2 text-[10px] text-ink-dim">
-          <span title="Average length of all existing handles">Avg</span>
+          <span title="Average length of all existing handles">All</span>
           <span className="font-mono text-phosphor tabular-nums">{avgHandleLength(node)}</span>
           <span title="Set every handle length to this value. Direction is preserved; zero handles seed a horizontal arm. Mirror is honored.">
             <NumField
               className="field font-mono text-[11px] w-14"
               value={avgHandleLength(node)}
               min={0}
-              aria-label="bulk handle length"
+              aria-label="bulk handle length all"
               onCommit={(n) => bulkSetHandleLength(node, n)}
             />
           </span>
           <span className="text-[9px] text-ink-dim/70">bulk</span>
         </div>
+        {pointSel.length > 1 && (
+          <div className="flex items-center gap-2 text-[10px] text-ink-dim">
+            <span title="Average length of handles on multi-selected points (Shift-click points to select). Arrow keys nudge bulk length by 1 (Shift for 10) when not typing. Mir toggles Mirror on all selected points. Sm toggles Smooth on all selected points (auto-smooths handles). Hz/Vt set handle axes.">Sel</span>
+            <span className="font-mono text-phosphor tabular-nums">{avgHandleLengthForSelected(node, pointSel)}</span>
+            {(() => {
+              const { on, total } = countMirroredSelected(node, pointSel, mirrorPoints ?? {});
+              const mixed = on > 0 && on < total;
+              const allOn = on === total && total > 0;
+              return (
+                <button
+                  type="button"
+                  className={cn(
+                    "h-5 rounded-[4px] px-1.5 text-[9px] tracking-wide",
+                    allOn ? "bg-phosphor/15 text-phosphor" : mixed ? "border border-phosphor/40 text-phosphor" : "border border-border text-ink-dim",
+                  )}
+                  title={mixed ? "Mixed Mirror — click to turn Mirror on for all selected points" : allOn ? "Mirror on for selected points — click to turn off" : "Mirror off for selected points — click to turn on (and mirror opposite handles)"}
+                  onClick={() => bulkSetMirror(node, pointSel, !allOn)}
+                >
+                  {mixed ? "Mix" : "Mir"}
+                </button>
+              );
+            })()}
+            {(() => {
+              const { on, total } = countSmoothSelected(node, pointSel);
+              const mixed = on > 0 && on < total;
+              const allSmooth = on === total && total > 0;
+              return (
+                <button
+                  type="button"
+                  className={cn(
+                    "h-5 rounded-[4px] px-1.5 text-[9px] tracking-wide",
+                    allSmooth ? "bg-phosphor/15 text-phosphor" : mixed ? "border border-phosphor/40 text-phosphor" : "border border-border text-ink-dim",
+                  )}
+                  title={mixed ? "Mixed Smooth — click to make all selected points Smooth (auto handles)" : allSmooth ? "Smooth for selected points — click to set Corner" : "Corner for selected points — click to set Smooth (auto handles)"}
+                  onClick={() => bulkSetSmooth(node, pointSel, !allSmooth)}
+                >
+                  {mixed ? "Mix" : allSmooth ? "Sm" : "Cr"}
+                </button>
+              );
+            })()}
+            <button
+              type="button"
+              className="h-5 rounded-[4px] border border-border px-1.5 text-[9px] tracking-wide text-ink-dim hover:border-phosphor hover:text-ink"
+              title="Set handles on selected points to horizontal (preserve length, honor Mirror)"
+              onClick={() => bulkSetHandleAxis(node, pointSel, "h")}
+            >
+              Hz
+            </button>
+            <button
+              type="button"
+              className="h-5 rounded-[4px] border border-border px-1.5 text-[9px] tracking-wide text-ink-dim hover:border-phosphor hover:text-ink"
+              title="Set handles on selected points to vertical (preserve length, honor Mirror)"
+              onClick={() => bulkSetHandleAxis(node, pointSel, "v")}
+            >
+              Vt
+            </button>
+            <span title="Set handle lengths on the selected points only. Direction is preserved; zero handles seed a horizontal arm. Mirror is honored. Shift-click points to multi-select. Arrow keys nudge the bulk length by 1 (Shift for 10).">
+              <NumField
+                className="field font-mono text-[11px] w-14"
+                value={avgHandleLengthForSelected(node, pointSel)}
+                min={0}
+                aria-label="bulk handle length selected"
+                onCommit={(n) => bulkSetHandleLength(node, n, pointSel)}
+              />
+            </span>
+            <span className="text-[9px] text-phosphor/80">{pointSel.length}</span>
+          </div>
+        )}
+        <div className="flex items-center gap-2 text-[10px] text-ink-dim">
+          <span title="Average length of outer path handles">Outer</span>
+          <span className="font-mono text-phosphor tabular-nums">{avgHandleLengthForRing(node, null)}</span>
+          <span title="Set outer path handle lengths. Direction is preserved; zero handles seed a horizontal arm. Mirror is honored.">
+            <NumField
+              className="field font-mono text-[11px] w-14"
+              value={avgHandleLengthForRing(node, null)}
+              min={0}
+              aria-label="bulk handle length outer"
+              onCommit={(n) => bulkSetHandleLength(node, n, "outer")}
+            />
+          </span>
+          <span className="text-[9px] text-ink-dim/70">ring</span>
+        </div>
         <div ref={pointListRef} data-point-list className="max-h-56 space-y-1 overflow-auto scrollbar-thin">
           {node.points.map((pt, i) => (
-            <PointRow key={`p-${i}`} nodeId={node.id} index={i} point={pt} active={activeOuter === i} />
+            <PointRow key={`p-${i}`} nodeId={node.id} index={i} point={pt} active={activeOuter === i || isSelected(i)} />
           ))}
         </div>
         {holes.length > 0 && (
@@ -353,6 +613,18 @@ export function PathFields({ node }: { node: PathNode }) {
                   >
                     Hole {h + 1}
                   </button>
+                  <span className="font-mono text-[10px] text-phosphor tabular-nums" title="Average handle length for this hole">
+                    {avgHandleLengthForRing(node, h)}
+                  </span>
+                  <span title="Set this hole's handle lengths. Direction is preserved; zero handles seed a horizontal arm. Mirror is honored.">
+                    <NumField
+                      className="field font-mono text-[11px] w-12"
+                      value={avgHandleLengthForRing(node, h)}
+                      min={0}
+                      aria-label={`bulk handle length hole ${h + 1}`}
+                      onCommit={(n) => bulkSetHandleLength(node, n, h)}
+                    />
+                  </span>
                   <button
                     type="button"
                     data-hole-fill
@@ -379,7 +651,7 @@ export function PathFields({ node }: { node: PathNode }) {
                     index={i}
                     point={pt}
                     hole={h}
-                    active={hit?.hole === h && hit.index === i}
+                    active={hit?.hole === h && hit.index === i || isSelected(i, h)}
                   />
                 ))}
               </div>

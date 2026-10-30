@@ -25,7 +25,7 @@ import {
   unspinPoint,
 } from "@/lib/design/group-transform";
 import { hitTop } from "@/lib/design/hit";
-import { appendPenPoint, editPathHit, knifeCutStroke, setPathEditHit, setPathPointHandles } from "@/lib/design/path-actions";
+import { appendPenPoint, editPathHit, knifeCutStroke, setPathEditHit, setPathPointHandles, togglePathPointSelection } from "@/lib/design/path-actions";
 import { knifePreviewLobe, knifeStrokePreview } from "@/lib/design/path-cut";
 import { drawPathNodeTangents, hitPathNode, hitPathLengthLabel, pathWorldToLocal } from "@/lib/design/path-edit";
 import { hasHandle, mirrorHandle } from "@/lib/design/path-curve";
@@ -127,6 +127,7 @@ export function CanvasStage() {
   const selection = useDesign((s) => s.selection);
   const strokeGhost = useDesign((s) => s.strokeGhost);
   const typeGhost = useDesign((s) => s.typeGhost);
+  const glyphDensityScaleFactor = useDesign((s) => s.glyphDensityScaleFactor);
   const booleanPreview = useDesign((s) => s.booleanPreview);
   const pathEditHit = useDesign((s) => s.pathEditHit);
   const showTangentLengths = useDesign((s) => s.showTangentLengths);
@@ -515,7 +516,7 @@ export function CanvasStage() {
       }
     }
     ctx.restore();
-  }, [doc, viewport, selection, booleanPreview, tool, present, pathEditHit, showTangentLengths, hoverTick, nudgeHold, inspectorRail, distributePreview, alignPreview, alignEcho, strokeGhost, typeGhost]);
+  }, [doc, viewport, selection, booleanPreview, tool, present, pathEditHit, showTangentLengths, hoverTick, nudgeHold, inspectorRail, distributePreview, alignPreview, alignEcho, strokeGhost, typeGhost, glyphDensityScaleFactor]);
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -664,6 +665,10 @@ export function CanvasStage() {
       if (hit) {
         e.preventDefault();
         e.currentTarget.setPointerCapture(e.pointerId);
+        if (e.shiftKey && hit.arm === "anchor") {
+          togglePathPointSelection(hit.index, hit.hole);
+          return;
+        }
         drag.current = {
           id: selected.id,
           hit,
@@ -674,6 +679,7 @@ export function CanvasStage() {
           pulled: true,
         };
         setPathEditHit(hit);
+        useDesign.setState({ pathPointSelection: hit.arm === "anchor" ? [{ index: hit.index, hole: hit.hole }] : [] });
         if (hit.arm !== "anchor") {
           const local = pathWorldToLocal(selected, d.x, d.y);
           editPathHit(selected.id, hit, local.x, local.y, !e.altKey, true);
