@@ -7,6 +7,8 @@ import {
   setPathClosed,
   setPathPointHandles,
   setPathPointSelection,
+  reverseSelectedPath,
+  reverseRelativeSelectedPoints,
 } from "@/lib/design/path-actions";
 import {
   offsetSelectedPath,
@@ -546,6 +548,15 @@ export function PathFields({ node }: { node: PathNode }) {
           >
             Simplify
           </button>
+          <button
+            type="button"
+            data-path-exit="Rev"
+            className="h-8 rounded-[8px] border border-border px-2 text-[10px] text-ink-dim hover:border-phosphor hover:text-ink"
+            title="Reverse path direction (flips point order and swaps in/out handles so curves stay continuous). Clears point selection."
+            onClick={() => reverseSelectedPath()}
+          >
+            Rev
+          </button>
         </div>
         <div className="flex items-center gap-2 text-[10px] text-ink-dim">
           <span title="Average length of all existing handles">All</span>
@@ -563,7 +574,7 @@ export function PathFields({ node }: { node: PathNode }) {
         </div>
         {pointSel.length > 1 && (
           <div className="flex items-center gap-2 text-[10px] text-ink-dim">
-            <span title="Average length of handles on multi-selected points (Shift-click points to select). Arrow keys nudge bulk length by 1 (Shift for 10) when not typing. Mir toggles Mirror on all selected points. Sm toggles Smooth on all selected points (auto-smooths handles). Hz/Vt set handle axes. Zro zeros all handles. Del removes the selected points.">Sel</span>
+            <span title="Average length of handles on multi-selected points (Shift-click points to select). Arrow keys nudge bulk length by 1 (Shift for 10) when not typing. Mir toggles Mirror on all selected points. Sm toggles Smooth on all selected points (auto-smooths handles). Hz/Vt set handle axes. Zro zeros all handles. Del removes the selected points. Ord reverses relative order of selected points.">Sel</span>
             <span className="font-mono text-phosphor tabular-nums">{avgHandleLengthForSelected(node, pointSel)}</span>
             {(() => {
               const { on, total } = countMirroredSelected(node, pointSel, mirrorPoints ?? {});
@@ -624,6 +635,14 @@ export function PathFields({ node }: { node: PathNode }) {
               onClick={() => bulkSetHandleLength(node, 0, pointSel)}
             >
               Zro
+            </button>
+            <button
+              type="button"
+              className="h-5 rounded-[4px] border border-border px-1.5 text-[9px] tracking-wide text-ink-dim hover:border-phosphor hover:text-ink"
+              title="Reverse relative order of selected points (points swap among the selected slots; in/out handles flip so curves reverse). Selection stays on the same slots."
+              onClick={() => reverseRelativeSelectedPoints(node, pointSel)}
+            >
+              Ord
             </button>
             <button
               type="button"
