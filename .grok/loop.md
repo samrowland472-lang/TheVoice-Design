@@ -1,3 +1,15 @@
+## Iteration 2026-10-31T18:12:37Z
+
+**Done:** Brush tip preview now shows a small numeric hardness percentage centered inside the tip (upright phosphor digits) when the hard core is large enough to hold text. The inspector Core readout also lists the hardness % directly under the live core diameter so the solid-core fraction is obvious beside the tip. Phosphor numbers, no emoji chrome.
+
+**Next recommended:** Live scatter direction angle readout next to Scat, or a small pressure-scaled opacity % beside the tip.
+
+## Iteration 2026-10-31T17:06:00Z
+
+**Done:** Brush inspector now shows a live Scat readout (px) next to the tip when the selected brush has scatter. It reports the pressure-scaled along-axis scatter amplitude matching the stroke engine (stronger when the pen is tilted, isotropic fallback otherwise), glowing phosphor while a tilted stroke is active. Phosphor numbers, no emoji chrome.
+
+**Next recommended:** Small numeric hardness % inside/beside the tip core, or a live scatter direction angle readout.
+
 ## Iteration 2026-10-31T16:05:00Z
 
 **Done:** Brush inspector now shows a live hardness Core readout (px) next to the tip preview. It reports the solid core diameter matching the dashed ring in the tip (pressure-scaled size × hardness), updating with the Hard slider, brush size, and live stroke pressure. Phosphor numbers, no emoji chrome.
