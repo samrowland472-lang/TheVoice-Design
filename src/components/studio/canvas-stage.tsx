@@ -6,13 +6,31 @@ import { knifeStrokePreview, knifePreviewPoint } from "@/lib/design/path-cut";
 import { setStudioStatus, holdStudioStatus, releaseStudioStatus } from "@/lib/design/studio-status";
 import { hitTop } from "@/lib/design/hit";
 import { nodeBounds } from "@/lib/design/layer-groups";
+import { nodesInMarquee } from "@/lib/design/marquee-nodes";
+import { nodeWorldAabb, smartSnap, type GuideSet } from "@/lib/design/snap";
+import { expandMovePlaces } from "@/lib/design/group-transform";
 import type { DesignNode, PathNode, Viewport } from "@/lib/design/types";
 import { isPath } from "@/lib/design/types";
 
 type ResidualMark = { x: number; y: number; born: number };
 
+type MarqueeState = {
+  start: { x: number; y: number };
+  current: { x: number; y: number };
+  contain: boolean;
+  additive: boolean;
+};
+
 function isPathNode(n: DesignNode): n is PathNode {
   return isPath(n);
+}
+
+function marqueeBox(a: { x: number; y: number }, b: { x: number; y: number }) {
+  const x = Math.min(a.x, b.x);
+  const y = Math.min(a.y, b.y);
+  const w = Math.abs(b.x - a.x);
+  const h = Math.abs(b.y - a.y);
+  return { x, y, w, h };
 }
 
 export default function CanvasStage() {
@@ -25,7 +43,15 @@ export default function CanvasStage() {
     marks: [],
   });
   const panRef = useRef<{ startX: number; startY: number; vx: number; vy: number } | null>(null);
+  const marqueeRef = useRef<MarqueeState | null>(null);
+  const moveRef = useRef<{
+    start: { x: number; y: number };
+    originals: { id: string; x: number; y: number }[];
+    committed: boolean;
+  } | null>(null);
   const [hoverMark, setHoverMark] = useState<{ x: number; y: number } | null>(null);
+  const [marqueeTick, setMarqueeTick] = useState(0);
+  const [liveGuides, setLiveGuides] = useState<GuideSet | null>(null);
   const [size, setSize] = useState({ w: 800, h: 600 });
 
   const doc = useDesign((s) => s.doc);
@@ -134,9 +160,92 @@ export default function CanvasStage() {
       ctx.restore();
     }
 
+    // Live marquee rectangle + optional contain corner ticks
+    const mq = marqueeRef.current;
+    if (mq) {
+      const box = marqueeBox(mq.start, mq.current);
+      const sx = box.x * viewport.zoom + viewport.x;
+      const sy = box.y * viewport.zoom + viewport.y;
+      const sw = box.w * viewport.zoom;
+      const sh = box.h * viewport.zoom;
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.strokeStyle = mq.contain ? "rgba(200,247,197,0.95)" : "rgba(200,247,197,0.75)";
+      ctx.fillStyle = mq.contain ? "rgba(200,247,197,0.12)" : "rgba(200,247,197,0.08)";
+      ctx.lineWidth = 1.25;
+      ctx.shadowColor = "#c8f7c5";
+      ctx.shadowBlur = 4;
+      ctx.fillRect(sx, sy, sw, sh);
+      ctx.strokeRect(sx, sy, sw, sh);
+      if (mq.contain) {
+        // Corner ticks for contain mode
+        const t = 7;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        // NW
+        ctx.moveTo(sx, sy + t);
+        ctx.lineTo(sx, sy);
+        ctx.lineTo(sx + t, sy);
+        // NE
+        ctx.moveTo(sx + sw - t, sy);
+        ctx.lineTo(sx + sw, sy);
+        ctx.lineTo(sx + sw, sy + t);
+        // SE
+        ctx.moveTo(sx + sw, sy + sh - t);
+        ctx.lineTo(sx + sw, sy + sh);
+        ctx.lineTo(sx + sw - t, sy + sh);
+        // SW
+        ctx.moveTo(sx + t, sy + sh);
+        ctx.lineTo(sx, sy + sh);
+        ctx.lineTo(sx, sy + sh - t);
+        ctx.stroke();
+      }
+      // Preview outlines for nodes under marquee
+      const mode = mq.contain ? "contain" : "intersect";
+      const ids = nodesInMarquee(doc.nodes, box, mode);
+      ctx.shadowBlur = 3;
+      ctx.lineWidth = 1.1;
+      ctx.strokeStyle = "rgba(232,255,230,0.7)";
+      for (const id of ids) {
+        const n = doc.nodes.find((nn) => nn.id === id);
+        if (!n) continue;
+        const b = nodeWorldAabb(n);
+        const px = b.x * viewport.zoom + viewport.x;
+        const py = b.y * viewport.zoom + viewport.y;
+        ctx.strokeRect(px - 0.5, py - 0.5, b.w * viewport.zoom + 1, b.h * viewport.zoom + 1);
+      }
+      ctx.restore();
+    }
+
+    // Live smart-guide lines while dragging selected layers
+    if (liveGuides && doc) {
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.strokeStyle = "rgba(200,247,197,0.85)";
+      ctx.lineWidth = 1;
+      ctx.shadowColor = "#c8f7c5";
+      ctx.shadowBlur = 6;
+      ctx.setLineDash([4, 3]);
+      for (const gx of liveGuides.x) {
+        const sx = gx * viewport.zoom + viewport.x;
+        ctx.beginPath();
+        ctx.moveTo(sx, 0);
+        ctx.lineTo(sx, size.h);
+        ctx.stroke();
+      }
+      for (const gy of liveGuides.y) {
+        const sy = gy * viewport.zoom + viewport.y;
+        ctx.beginPath();
+        ctx.moveTo(0, sy);
+        ctx.lineTo(size.w, sy);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     if (hoverMark) drawMark(hoverMark.x, hoverMark.y);
     for (const m of dragRef.current.marks) drawMark(m.x, m.y, true);
-  }, [doc, viewport, size, statusTick, hoverMark, tool, selection]);
+  }, [doc, viewport, size, statusTick, hoverMark, tool, selection, marqueeTick, liveGuides]);
 
   const localFromEvent = (e: React.PointerEvent) => {
     const rect = canvasRef.current?.getBoundingClientRect();
@@ -166,11 +275,35 @@ export default function CanvasStage() {
       const hit = hitTop(doc.nodes, w.x, w.y);
       const additive = e.shiftKey || e.metaKey || e.ctrlKey;
       if (hit) {
-        select([hit.id], additive);
-        setStudioStatus(additive ? "Selection updated" : `Selected ${hit.kind}`);
-      } else if (!additive) {
-        select([], false);
-        setStudioStatus("Selection cleared");
+        const already = selection.includes(hit.id);
+        if (additive) {
+          select([hit.id], true);
+        } else if (!already) {
+          select([hit.id], false);
+        }
+        // Start a move of the (possibly updated) selection
+        const sel = useDesign.getState().selection;
+        const originals = doc.nodes
+          .filter((n) => sel.includes(n.id))
+          .map((n) => ({ id: n.id, x: n.x, y: n.y }));
+        moveRef.current = { start: w, originals, committed: false };
+        marqueeRef.current = null;
+        setLiveGuides(null);
+        setStudioStatus(additive ? "Selection updated · drag to move" : already ? "Drag to move · smart guides" : `Selected ${hit.kind} · drag to move`);
+      } else {
+        // Start pasteboard marquee
+        marqueeRef.current = {
+          start: w,
+          current: w,
+          contain: e.altKey,
+          additive,
+        };
+        setMarqueeTick((t) => t + 1);
+        setStudioStatus(
+          additive
+            ? "Marquee · Shift add · Alt contain"
+            : "Drag empty board to marquee · Shift add · click empty clears",
+        );
       }
     }
   };
@@ -187,12 +320,74 @@ export default function CanvasStage() {
       return;
     }
 
+    if (tool === "select" && moveRef.current) {
+      const mv = moveRef.current;
+      const rawDx = w.x - mv.start.x;
+      const rawDy = w.y - mv.start.y;
+      if (!mv.committed && (Math.abs(rawDx) > 0.4 || Math.abs(rawDy) > 0.4)) {
+        useDesign.getState().commit();
+        mv.committed = true;
+      }
+      // Proposed positions after raw drag
+      const byId = new Map(doc.nodes.map((n) => [n.id, n]));
+      const proposedMoving: DesignNode[] = [];
+      for (const o of mv.originals) {
+        const n = byId.get(o.id);
+        if (!n) continue;
+        proposedMoving.push({ ...n, x: o.x + rawDx, y: o.y + rawDy } as DesignNode);
+      }
+      const others = doc.nodes.filter((n) => !mv.originals.some((o) => o.id === n.id));
+      const artboard = { width: doc.width, height: doc.height };
+      const thresh = Math.max(2, 7 / Math.max(0.25, viewport.zoom));
+      const { dx, dy, guides } = smartSnap(proposedMoving, others, artboard, thresh);
+      const finalDx = rawDx + dx;
+      const finalDy = rawDy + dy;
+      const places = mv.originals.map((o) => ({ id: o.id, x: o.x + finalDx, y: o.y + finalDy }));
+      const expanded = expandMovePlaces(doc.nodes, places);
+      const placeMap = new Map(expanded.map((pl) => [pl.id, pl]));
+      useDesign.getState().mapNodes(
+        expanded.map((pl) => pl.id),
+        (n) => {
+          const pl = placeMap.get(n.id);
+          return pl ? { ...n, x: pl.x, y: pl.y } : n;
+        },
+        false,
+      );
+      setLiveGuides(guides.x.length || guides.y.length ? guides : null);
+      const snapped = Math.abs(dx) > 0.05 || Math.abs(dy) > 0.05;
+      setStudioStatus(
+        snapped
+          ? `Move · snapped · Δ ${finalDx.toFixed(1)}, ${finalDy.toFixed(1)}`
+          : `Move · Δ ${finalDx.toFixed(1)}, ${finalDy.toFixed(1)}`,
+      );
+      setMarqueeTick((t) => t + 1);
+      return;
+    }
+
+    if (tool === "select" && marqueeRef.current) {
+      const mq = marqueeRef.current;
+      mq.current = w;
+      mq.contain = e.altKey;
+      const box = marqueeBox(mq.start, mq.current);
+      const mode = mq.contain ? "contain" : "intersect";
+      const ids = nodesInMarquee(doc.nodes, box, mode);
+      const label = mq.contain ? "Alt contain" : "intersect";
+      setStudioStatus(
+        ids.length
+          ? `Marquee · ${ids.length} layer${ids.length === 1 ? "" : "s"} · ${label}`
+          : `Marquee · empty · ${label}`,
+      );
+      setMarqueeTick((t) => t + 1);
+      return;
+    }
+
     if (tool === "knife") {
       if (dragRef.current.start) {
         const a = dragRef.current.start;
         const b = w;
         const preview = knifeStrokePreview(
-          doc.nodes.find((n) => isPathNode(n) && selection.includes(n.id)) as PathNode || (doc.nodes.find(isPathNode) as PathNode),
+          (doc.nodes.find((n) => isPathNode(n) && selection.includes(n.id)) as PathNode) ||
+            (doc.nodes.find(isPathNode) as PathNode),
           a.x,
           a.y,
           b.x,
@@ -230,6 +425,41 @@ export default function CanvasStage() {
     if (panRef.current) {
       panRef.current = null;
     }
+
+    if (tool === "select" && marqueeRef.current && doc) {
+      const mq = marqueeRef.current;
+      mq.contain = e.altKey;
+      const box = marqueeBox(mq.start, mq.current);
+      const moved = box.w > 2 / viewport.zoom || box.h > 2 / viewport.zoom;
+      if (moved) {
+        const mode = mq.contain ? "contain" : "intersect";
+        const ids = nodesInMarquee(doc.nodes, box, mode);
+        select(ids, mq.additive);
+        holdStudioStatus(
+          ids.length
+            ? `Marquee · ${ids.length} selected${mq.contain ? " · contain" : ""}`
+            : "Marquee · none",
+        );
+      } else if (!mq.additive) {
+        select([], false);
+        holdStudioStatus("Selection cleared");
+      }
+      marqueeRef.current = null;
+      setMarqueeTick((t) => t + 1);
+      return;
+    }
+
+    if (moveRef.current) {
+      const mv = moveRef.current;
+      moveRef.current = null;
+      setLiveGuides(null);
+      setMarqueeTick((t) => t + 1);
+      if (mv.committed) {
+        holdStudioStatus("Layer moved");
+      }
+      return;
+    }
+
     if (!doc || tool !== "knife") return;
     const p = localFromEvent(e);
     const w = screenToDoc(p.x, p.y, viewport);

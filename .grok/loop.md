@@ -18,11 +18,12 @@
 - Deepened path point tab-order navigation: focus-visible phosphor rings on fields and buttons; focusing a point header, X/Y field, or action (Smooth/Corner/Delete) selects the point on the canvas so keyboard travel stays in sync with the artboard.
 - Restored full CanvasStage: live document drawing via drawDocument, knife tool with live cut-count status, hover snap phosphor crosses, and residual cut marks that linger ~1.6 s after a successful cut (soft outer glow + thin white cross that fades).
 - Select, hand, and zoom on the canvas stage: click to select (shift for additive) with phosphor selection outlines; hand drag pans the viewport; wheel zooms toward the cursor.
+- Marquee select on the canvas: drag empty board to draw a phosphor marquee; intersects layers by default; Alt switches to contain mode with corner ticks; Shift/meta adds to selection; live count in status strip; click without drag still clears.
 
 ## Iteration
-2026-11-01T05:05:32Z — Deepened select / hand / zoom on the restored canvas stage. Click selects with phosphor outlines, hand pans, wheel zooms toward cursor. Typecheck, build, and browser-smoke green (hasCanvas true).
+2026-11-01T07:07:51Z — Drag-move selected layers with smart guides. Click a layer (or additive) then drag; smartSnap locks to edges/centers/artboard; phosphor dashed guides draw live; groups carry descendants. Typecheck, build, browser-smoke green (hasCanvas true).
 
 ## Next recommended
-- Marquee select on the canvas (drag rectangle to multi-select).
+- Resize handles on selected layers with live smart guides.
 - Or polish knife residual fade curve / core brighten.
 - Or deepen path point editing on the live canvas.
