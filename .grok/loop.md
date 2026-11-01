@@ -1,7 +1,6 @@
 # The Voice Design — loop
 
 ## Done
-- Stronger knife cut-point phosphor: live marks now draw a filled diamond + cross arms (brighter, larger) at each intersection while dragging.
 - Knife cut feedback: live status echo while dragging shows cut count and path count (e.g. “Knife · 3 cuts across 1 path”); on release holds “Path cut” or “Knife · no cut”.
 - Restored the Inspector rail (was a PLACEHOLDER that broke typecheck and the studio).
 - Single-select: transform, appearance, type, path, image, group notes.
@@ -15,10 +14,14 @@
 - Scatter status echo now shows the live strength number (e.g. “scatter 1.2”) beside the tilt angle while painting; strength is omitted when the override is off.
 - Scatter tip preview now draws the live strength number (phosphor, upright) on the short axis of the cross when the pen is tilted.
 - Brush tip preview shows a faint isotropic strength tick + number even at rest / low tilt, so the scatter override is readable before the pen leans.
+- Stronger knife cut-point phosphor: soft outer glow, bright core, thin white cross on both stroke-drag marks and hover snap points so cut locations read clearly on the canvas.
+- Deepened path point tab-order navigation: focus-visible phosphor rings on fields and buttons; focusing a point header, X/Y field, or action (Smooth/Corner/Delete) selects the point on the canvas so keyboard travel stays in sync with the artboard.
+- Restored full CanvasStage: live document drawing via drawDocument, knife tool with live cut-count status, hover snap phosphor crosses, and residual cut marks that linger ~1.6 s after a successful cut (soft outer glow + thin white cross that fades).
 
 ## Iteration
-2026-11-01T02:04:22Z — Stronger knife cut-point phosphor marks (diamond + cross) while dragging. Typecheck, build, and browser-smoke green.
+2026-11-01T04:10:00Z — Restored CanvasStage from placeholder. Live artboard drawing, knife stroke/hover phosphor marks, and residual lingering cut points after a successful path cut. Typecheck, build, and browser-smoke green (hasCanvas true).
+
 ## Next recommended
-- Deepen path point tab-order.
+- Knife cut residual marks that linger briefly after a successful cut (now shipped; polish fade curve or add core brighten if desired).
 - Or polish the scatter tip further (e.g. live strength tick length while dragging the slider).
-- Or add cut-path highlight persistence briefly after release.
+- Or deepen select/hand/zoom on the restored canvas stage.
