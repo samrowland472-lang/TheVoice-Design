@@ -32,7 +32,7 @@ import {
 } from "@/lib/design/path-actions";
 import { asEditablePath } from "@/lib/design/shape-to-path";
 import { knifeStrokePreview, knifePreviewPoint, knifeSplitPieces, knifePointSplitPieces } from "@/lib/design/path-cut";
-import { hitResizeHandle, type ResizeHandle } from "@/lib/design/box-resize";
+import { hitResizeHandle, handlePoint, type ResizeHandle } from "@/lib/design/box-resize";
 import {
   drawPathNodeTangents,
   hitPathNode,
@@ -141,6 +141,21 @@ export default function CanvasStage() {
   const [knifeHover, setKnifeHover] = useState<{ x: number; y: number } | null>(null);
   const [scaleFlip, setScaleFlip] = useState<{ x: boolean; y: boolean } | null>(null);
   const [rotateAngle, setRotateAngle] = useState<number | null>(null);
+  const [rotateHover, setRotateHover] = useState<{
+    cx: number;
+    cy: number;
+    radius: number;
+  } | null>(null);
+  const [scaleHover, setScaleHover] = useState<ResizeHandle | null>(null);
+  const [lengthHover, setLengthHover] = useState<{
+    nodeId: string;
+    index: number;
+    arm: "in" | "out";
+    hole?: number;
+    length: number;
+    lx: number;
+    ly: number;
+  } | null>(null);
   const setViewport = useDesign((s) => s.setViewport);
   const select = useDesign((s) => s.select);
   const updateNodes = useDesign((s) => s.updateNodes);
@@ -208,9 +223,153 @@ export default function CanvasStage() {
     if (pathPointNumericPreview) drawPathPointNumericPreview(ctx, pathPointNumericPreview, doc, viewport, dpr);
     if (pathPointHandleNumericPreview) drawPathPointHandleNumericPreview(ctx, pathPointHandleNumericPreview, doc, viewport, dpr);
     if (marquee) drawMarquee(ctx, marquee, viewport, dpr);
+
+    if (lengthHover && showTangentLengths) {
+      const { lx, ly, length } = lengthHover;
+      const zoom = viewport.zoom;
+      const label = String(length);
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.translate(viewport.x, viewport.y);
+      ctx.scale(zoom, zoom);
+      ctx.font = `${Math.max(9, 11 / zoom)}px "IBM Plex Mono", ui-monospace, monospace`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const pad = 5 / zoom;
+      const tw = ctx.measureText(label).width;
+      const bw = tw + pad * 2;
+      const bh = 14 / zoom;
+      // Hover preview: slightly more transparent phosphor plate
+      ctx.fillStyle = "rgba(6, 23, 15, 0.72)";
+      ctx.strokeStyle = "rgba(63, 198, 255, 0.75)";
+      ctx.lineWidth = 1 / zoom;
+      ctx.beginPath();
+      ctx.roundRect(lx - bw / 2, ly - bh / 2, bw, bh, 3 / zoom);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "rgba(63, 198, 255, 0.9)";
+      ctx.fillText(label, lx, ly);
+      ctx.restore();
+    }
+    if (rotateHover) {
+      const { cx, cy, radius } = rotateHover;
+      const zoom = viewport.zoom;
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.translate(viewport.x, viewport.y);
+      ctx.scale(zoom, zoom);
+      // Phosphor ghost arc around selection center — soft fill + arrowheads
+      ctx.beginPath();
+      // ~270° arc starting near top, clockwise-ish for rotation hint
+      const start = -Math.PI * 0.85;
+      const end = Math.PI * 0.65;
+      ctx.arc(cx, cy, radius, start, end);
+      ctx.strokeStyle = "rgba(63, 198, 255, 0.55)";
+      ctx.lineWidth = 2.2 / zoom;
+      ctx.lineCap = "round";
+      ctx.stroke();
+      // Soft fill wedge
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, radius * 0.92, start, end);
+      ctx.closePath();
+      ctx.fillStyle = "rgba(63, 198, 255, 0.08)";
+      ctx.fill();
+      // Arrowheads at both ends
+      const arrowLen = 10 / zoom;
+      const arrowAng = 0.45;
+      for (const ang of [start, end]) {
+        const ax = cx + Math.cos(ang) * radius;
+        const ay = cy + Math.sin(ang) * radius;
+        const dir = ang === start ? -1 : 1;
+        ctx.beginPath();
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(
+          ax - Math.cos(ang - dir * arrowAng) * arrowLen,
+          ay - Math.sin(ang - dir * arrowAng) * arrowLen,
+        );
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(
+          ax - Math.cos(ang + dir * arrowAng) * arrowLen,
+          ay - Math.sin(ang + dir * arrowAng) * arrowLen,
+        );
+        ctx.strokeStyle = "rgba(126, 224, 255, 0.8)";
+        ctx.lineWidth = 1.6 / zoom;
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    if (scaleHover && selection.length === 1 && pathPointSelection.length > 1) {
+      const n = doc.nodes.find((x) => x.id === selection[0]);
+      if (n && isPath(n)) {
+        const coords: { x: number; y: number }[] = [];
+        for (const sel of pathPointSelection) {
+          const ring = sel.hole == null ? n.points : n.holes?.[sel.hole];
+          const pt = ring?.[sel.index];
+          if (pt) coords.push({ x: pt.x, y: pt.y });
+        }
+        if (coords.length > 1) {
+          const xs = coords.map((c) => c.x);
+          const ys = coords.map((c) => c.y);
+          const minX = Math.min(...xs);
+          const maxX = Math.max(...xs);
+          const minY = Math.min(...ys);
+          const maxY = Math.max(...ys);
+          const pad = 6 / viewport.zoom;
+          const boxX = n.x + minX - pad;
+          const boxY = n.y + minY - pad;
+          const boxW = maxX - minX + pad * 2;
+          const boxH = maxY - minY + pad * 2;
+          const zoom = viewport.zoom;
+          ctx.save();
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          ctx.translate(viewport.x, viewport.y);
+          ctx.scale(zoom, zoom);
+          const nc = nodeCenter(n);
+          if (n.rotation) {
+            ctx.translate(nc.x, nc.y);
+            ctx.rotate(degToRad(n.rotation));
+            ctx.translate(-nc.x, -nc.y);
+          }
+          // Soft phosphor ghost box
+          ctx.beginPath();
+          ctx.rect(boxX, boxY, boxW, boxH);
+          ctx.fillStyle = "rgba(63, 198, 255, 0.06)";
+          ctx.fill();
+          ctx.strokeStyle = "rgba(63, 198, 255, 0.45)";
+          ctx.lineWidth = 1.8 / zoom;
+          ctx.setLineDash([6 / zoom, 4 / zoom]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          // Highlight the hovered handle with a larger corner marker
+          const hp = handlePoint({ x: boxX, y: boxY, w: boxW, h: boxH }, scaleHover);
+          const mark = 11 / zoom;
+          ctx.beginPath();
+          ctx.arc(hp.x, hp.y, mark / 2, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(63, 198, 255, 0.25)";
+          ctx.fill();
+          ctx.strokeStyle = "rgba(126, 224, 255, 0.85)";
+          ctx.lineWidth = 1.6 / zoom;
+          ctx.stroke();
+          // Small cross or corner ticks
+          const tick = 5 / zoom;
+          ctx.beginPath();
+          ctx.moveTo(hp.x - tick, hp.y);
+          ctx.lineTo(hp.x + tick, hp.y);
+          ctx.moveTo(hp.x, hp.y - tick);
+          ctx.lineTo(hp.x, hp.y + tick);
+          ctx.strokeStyle = "rgba(63, 198, 255, 0.9)";
+          ctx.lineWidth = 1.2 / zoom;
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+    }
+
     if (knifeStroke) drawKnifeStroke(ctx, knifeStroke, doc, viewport, dpr);
     else if (knifeHover) drawKnifeHover(ctx, knifeHover, doc, viewport, dpr);
-  }, [doc, selection, viewport, pathEditHit, pathPointSelection, marquee, knifeStroke, knifeHover, scaleFlip, pathPointAlignPreview, pathPointNumericPreview, pathPointHandleNumericPreview, showTangentLengths, rotateAngle]);
+  }, [doc, selection, viewport, pathEditHit, pathPointSelection, marquee, knifeStroke, knifeHover, scaleFlip, pathPointAlignPreview, pathPointNumericPreview, pathPointHandleNumericPreview, showTangentLengths, rotateAngle, lengthHover, rotateHover, scaleHover]);
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -236,11 +395,151 @@ export default function CanvasStage() {
     if (pathPointNumericPreview) drawPathPointNumericPreview(ctx, pathPointNumericPreview, doc, viewport, dpr);
     if (pathPointHandleNumericPreview) drawPathPointHandleNumericPreview(ctx, pathPointHandleNumericPreview, doc, viewport, dpr);
       if (marquee) drawMarquee(ctx, marquee, viewport, dpr);
+
+      if (lengthHover && showTangentLengths) {
+      const { lx, ly, length } = lengthHover;
+      const zoom = viewport.zoom;
+      const label = String(length);
+      ctx.save();
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.translate(viewport.x, viewport.y);
+      ctx.scale(zoom, zoom);
+      ctx.font = `${Math.max(9, 11 / zoom)}px "IBM Plex Mono", ui-monospace, monospace`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const pad = 5 / zoom;
+      const tw = ctx.measureText(label).width;
+      const bw = tw + pad * 2;
+      const bh = 14 / zoom;
+      // Hover preview: slightly more transparent phosphor plate
+      ctx.fillStyle = "rgba(6, 23, 15, 0.72)";
+      ctx.strokeStyle = "rgba(63, 198, 255, 0.75)";
+      ctx.lineWidth = 1 / zoom;
+      ctx.beginPath();
+      ctx.roundRect(lx - bw / 2, ly - bh / 2, bw, bh, 3 / zoom);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "rgba(63, 198, 255, 0.9)";
+      ctx.fillText(label, lx, ly);
+      ctx.restore();
+    }
+      if (rotateHover) {
+        const { cx, cy, radius } = rotateHover;
+        const zoom = viewport.zoom;
+        ctx.save();
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.translate(viewport.x, viewport.y);
+        ctx.scale(zoom, zoom);
+        ctx.beginPath();
+        const start = -Math.PI * 0.85;
+        const end = Math.PI * 0.65;
+        ctx.arc(cx, cy, radius, start, end);
+        ctx.strokeStyle = "rgba(63, 198, 255, 0.55)";
+        ctx.lineWidth = 2.2 / zoom;
+        ctx.lineCap = "round";
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, radius * 0.92, start, end);
+        ctx.closePath();
+        ctx.fillStyle = "rgba(63, 198, 255, 0.08)";
+        ctx.fill();
+        const arrowLen = 10 / zoom;
+        const arrowAng = 0.45;
+        for (const ang of [start, end]) {
+          const ax = cx + Math.cos(ang) * radius;
+          const ay = cy + Math.sin(ang) * radius;
+          const dir = ang === start ? -1 : 1;
+          ctx.beginPath();
+          ctx.moveTo(ax, ay);
+          ctx.lineTo(
+            ax - Math.cos(ang - dir * arrowAng) * arrowLen,
+            ay - Math.sin(ang - dir * arrowAng) * arrowLen,
+          );
+          ctx.moveTo(ax, ay);
+          ctx.lineTo(
+            ax - Math.cos(ang + dir * arrowAng) * arrowLen,
+            ay - Math.sin(ang + dir * arrowAng) * arrowLen,
+          );
+          ctx.strokeStyle = "rgba(126, 224, 255, 0.8)";
+          ctx.lineWidth = 1.6 / zoom;
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+    if (scaleHover && selection.length === 1 && pathPointSelection.length > 1) {
+      const n = doc.nodes.find((x) => x.id === selection[0]);
+      if (n && isPath(n)) {
+        const coords: { x: number; y: number }[] = [];
+        for (const sel of pathPointSelection) {
+          const ring = sel.hole == null ? n.points : n.holes?.[sel.hole];
+          const pt = ring?.[sel.index];
+          if (pt) coords.push({ x: pt.x, y: pt.y });
+        }
+        if (coords.length > 1) {
+          const xs = coords.map((c) => c.x);
+          const ys = coords.map((c) => c.y);
+          const minX = Math.min(...xs);
+          const maxX = Math.max(...xs);
+          const minY = Math.min(...ys);
+          const maxY = Math.max(...ys);
+          const pad = 6 / viewport.zoom;
+          const boxX = n.x + minX - pad;
+          const boxY = n.y + minY - pad;
+          const boxW = maxX - minX + pad * 2;
+          const boxH = maxY - minY + pad * 2;
+          const zoom = viewport.zoom;
+          ctx.save();
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          ctx.translate(viewport.x, viewport.y);
+          ctx.scale(zoom, zoom);
+          const nc = nodeCenter(n);
+          if (n.rotation) {
+            ctx.translate(nc.x, nc.y);
+            ctx.rotate(degToRad(n.rotation));
+            ctx.translate(-nc.x, -nc.y);
+          }
+          // Soft phosphor ghost box
+          ctx.beginPath();
+          ctx.rect(boxX, boxY, boxW, boxH);
+          ctx.fillStyle = "rgba(63, 198, 255, 0.06)";
+          ctx.fill();
+          ctx.strokeStyle = "rgba(63, 198, 255, 0.45)";
+          ctx.lineWidth = 1.8 / zoom;
+          ctx.setLineDash([6 / zoom, 4 / zoom]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          // Highlight the hovered handle with a larger corner marker
+          const hp = handlePoint({ x: boxX, y: boxY, w: boxW, h: boxH }, scaleHover);
+          const mark = 11 / zoom;
+          ctx.beginPath();
+          ctx.arc(hp.x, hp.y, mark / 2, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(63, 198, 255, 0.25)";
+          ctx.fill();
+          ctx.strokeStyle = "rgba(126, 224, 255, 0.85)";
+          ctx.lineWidth = 1.6 / zoom;
+          ctx.stroke();
+          // Small cross or corner ticks
+          const tick = 5 / zoom;
+          ctx.beginPath();
+          ctx.moveTo(hp.x - tick, hp.y);
+          ctx.lineTo(hp.x + tick, hp.y);
+          ctx.moveTo(hp.x, hp.y - tick);
+          ctx.lineTo(hp.x, hp.y + tick);
+          ctx.strokeStyle = "rgba(63, 198, 255, 0.9)";
+          ctx.lineWidth = 1.2 / zoom;
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+    }
+
       if (knifeStroke) drawKnifeStroke(ctx, knifeStroke, doc, viewport, dpr);
     });
     ro.observe(wrap);
     return () => ro.disconnect();
-  }, [doc, selection, viewport, pathEditHit, pathPointSelection, marquee, knifeStroke, scaleFlip, pathPointAlignPreview, pathPointNumericPreview, pathPointHandleNumericPreview, showTangentLengths, rotateAngle]);
+  }, [doc, selection, viewport, pathEditHit, pathPointSelection, marquee, knifeStroke, scaleFlip, pathPointAlignPreview, pathPointNumericPreview, pathPointHandleNumericPreview, showTangentLengths, rotateAngle, lengthHover, rotateHover, scaleHover]);
 
   function onPointerDown(e: React.PointerEvent) {
     if (!doc || e.button > 1) return;
@@ -345,6 +644,7 @@ export default function CanvasStage() {
               commit();
               setStudioStatus("Rotate path points");
               setRotateAngle(0);
+              setRotateHover(null);
               return;
             }
 
@@ -370,6 +670,7 @@ export default function CanvasStage() {
               };
               commit();
               setStudioStatus("Scale path points");
+              setScaleHover(null);
               return;
             }
 
@@ -620,6 +921,146 @@ export default function CanvasStage() {
         setStudioStatus("Knife · drag to cut");
       }
       return;
+    }
+
+
+    // Length badge hover preview (Len mode) before drag
+    if (showTangentLengths && !drag.current && tool === "select" && selection.length === 1) {
+      const n = doc.nodes.find((x) => x.id === selection[0]);
+      if (n && isPath(n)) {
+        const hit = hitPathNode(n, docPt.x, docPt.y, viewport.zoom);
+        if (hit && (hit.arm === "in" || hit.arm === "out")) {
+          const ring = hit.hole == null ? n.points : (n.holes?.[hit.hole] ?? []);
+          const pt = ring[hit.index];
+          const h = hit.arm === "in" ? pt?.in : pt?.out;
+          if (h && (Math.abs(h.x) > 0.2 || Math.abs(h.y) > 0.2)) {
+            const ax = n.x + pt.x;
+            const ay = n.y + pt.y;
+            const hx = ax + h.x;
+            const hy = ay + h.y;
+            const c = nodeCenter(n);
+            const va = n.rotation ? rotatePoint(ax, ay, c.x, c.y, n.rotation) : { x: ax, y: ay };
+            const vh = n.rotation ? rotatePoint(hx, hy, c.x, c.y, n.rotation) : { x: hx, y: hy };
+            const dx = vh.x - va.x;
+            const dy = vh.y - va.y;
+            const len = Math.hypot(dx, dy) || 1;
+            const ux = dx / len;
+            const uy = dy / len;
+            const off = 14 / viewport.zoom;
+            const lx = vh.x + ux * off;
+            const ly = vh.y + uy * off;
+            const length = Math.round(len);
+            setLengthHover({
+              nodeId: n.id,
+              index: hit.index,
+              arm: hit.arm,
+              hole: hit.hole,
+              length,
+              lx,
+              ly,
+            });
+            setStudioStatus(`Length ${hit.arm} · ${length}`);
+            return;
+          }
+        }
+      }
+      if (lengthHover) setLengthHover(null);
+    } else if (lengthHover) {
+      setLengthHover(null);
+    }
+
+    // Rotate handle hover preview (select tool, multi path points)
+    if (tool === "select" && !drag.current && selection.length === 1 && pathPointSelection.length > 1) {
+      const n = doc.nodes.find((x) => x.id === selection[0]);
+      if (n && isPath(n)) {
+        const coords: { x: number; y: number }[] = [];
+        for (const sel of pathPointSelection) {
+          const ring = sel.hole == null ? n.points : n.holes?.[sel.hole];
+          const pt = ring?.[sel.index];
+          if (pt) coords.push({ x: pt.x, y: pt.y });
+        }
+        if (coords.length > 1) {
+          const xs = coords.map((c) => c.x);
+          const ys = coords.map((c) => c.y);
+          const minX = Math.min(...xs);
+          const maxX = Math.max(...xs);
+          const minY = Math.min(...ys);
+          const maxY = Math.max(...ys);
+          const lcx = (minX + maxX) / 2;
+          const lcy = (minY + maxY) / 2;
+          const pad = 6 / viewport.zoom;
+          const handleLocalX = n.x + lcx;
+          const handleLocalY = n.y + minY - pad - 28 / viewport.zoom;
+          const nc = nodeCenter(n);
+          const worldHandle = n.rotation
+            ? rotatePoint(handleLocalX, handleLocalY, nc.x, nc.y, n.rotation)
+            : { x: handleLocalX, y: handleLocalY };
+          const worldCenter = n.rotation
+            ? rotatePoint(n.x + lcx, n.y + lcy, nc.x, nc.y, n.rotation)
+            : { x: n.x + lcx, y: n.y + lcy };
+          const dist = Math.hypot(docPt.x - worldHandle.x, docPt.y - worldHandle.y);
+          const hitR = 18 / viewport.zoom;
+          if (dist <= hitR + 4 / viewport.zoom) {
+            // Radius from center to handle, or a nice visual radius
+            const radius = Math.max(36 / viewport.zoom, Math.hypot(worldHandle.x - worldCenter.x, worldHandle.y - worldCenter.y) * 0.85);
+            setRotateHover({ cx: worldCenter.x, cy: worldCenter.y, radius });
+            setStudioStatus("Rotate path points");
+          } else if (rotateHover) {
+            setRotateHover(null);
+          }
+        } else if (rotateHover) {
+          setRotateHover(null);
+        }
+      } else if (rotateHover) {
+        setRotateHover(null);
+      }
+    } else if (rotateHover) {
+      setRotateHover(null);
+    }
+
+    // Scale handle hover preview (select tool, multi path points)
+    if (tool === "select" && !drag.current && selection.length === 1 && pathPointSelection.length > 1) {
+      const n = doc.nodes.find((x) => x.id === selection[0]);
+      if (n && isPath(n)) {
+        const coords: { x: number; y: number }[] = [];
+        for (const sel of pathPointSelection) {
+          const ring = sel.hole == null ? n.points : n.holes?.[sel.hole];
+          const pt = ring?.[sel.index];
+          if (pt) coords.push({ x: pt.x, y: pt.y });
+        }
+        if (coords.length > 1) {
+          const xs = coords.map((c) => c.x);
+          const ys = coords.map((c) => c.y);
+          const minX = Math.min(...xs);
+          const maxX = Math.max(...xs);
+          const minY = Math.min(...ys);
+          const maxY = Math.max(...ys);
+          const pad = 6 / viewport.zoom;
+          const box = {
+            x: n.x + minX - pad,
+            y: n.y + minY - pad,
+            w: maxX - minX + pad * 2,
+            h: maxY - minY + pad * 2,
+          };
+          const nc = nodeCenter(n);
+          const localPt = n.rotation
+            ? rotatePoint(docPt.x, docPt.y, nc.x, nc.y, -n.rotation)
+            : docPt;
+          const scaleHit = hitResizeHandle(box, localPt.x, localPt.y, viewport.zoom);
+          if (scaleHit) {
+            setScaleHover(scaleHit);
+            setStudioStatus("Scale path points");
+          } else if (scaleHover) {
+            setScaleHover(null);
+          }
+        } else if (scaleHover) {
+          setScaleHover(null);
+        }
+      } else if (scaleHover) {
+        setScaleHover(null);
+      }
+    } else if (scaleHover) {
+      setScaleHover(null);
     }
 
     // Alignment handle hover preview (select tool, multi path points)
@@ -905,6 +1346,9 @@ export default function CanvasStage() {
     setMarquee(null);
     setScaleFlip(null);
     setRotateAngle(null);
+    setLengthHover(null);
+    setRotateHover(null);
+    setScaleHover(null);
     if (d?.type === "path-points-align") {
       alignSelectedPathPoints(d.edge);
       clearPathPointAlignPreview();
