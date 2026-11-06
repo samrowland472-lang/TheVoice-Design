@@ -287,8 +287,8 @@ export function distributeMoveCount(plan: DistributePlan): number {
 /** Phosphor ghosts at the even positions. First and last stay solid; movers are dashed.
  *  Near-zero gaps collapse the tick lines into a single flush contact mark and
  *  lift the label clear of the packed stack so the read stays clean.
- *  Flush diamonds pulse subtly so contact reads as alive, with a soft multi-stop radial glow, a faint inner ring echo, a phase-lagged second echo arc, a quieter counter-arc on the opposite side, and tiny peak sparks when the pulse peaks. */
-export function drawDistributePreview(ctx: CanvasRenderingContext2D, plan: DistributePlan, zoom: number, pulse = 0, pulseLag = 0) {
+ *  Flush diamonds pulse subtly so contact reads as alive, with a soft multi-stop radial glow, a faint inner ring echo, a phase-lagged second echo arc, a quieter counter-arc on the opposite side that slowly orbits with a shared phase, tiny peak sparks when the pulse peaks, and a second slower harmonic so the diamond breathes on two timescales. */
+export function drawDistributePreview(ctx: CanvasRenderingContext2D, plan: DistributePlan, zoom: number, pulse = 0, pulseLag = 0, pulseRotate = 0, pulseSlow = 0) {
   const z = Math.max(zoom, 0.01);
   const flush = plan.gap <= 1.5;
   ctx.save();
@@ -330,9 +330,10 @@ export function drawDistributePreview(ctx: CanvasRenderingContext2D, plan: Distr
 
   if (flush) {
     // Contact diamonds at each ghost junction instead of zero-length ticks.
-    // Subtle pulse: scale 0.88–1.12, opacity 0.72–1.0 so contact feels alive.
+    // Subtle pulse: scale 0.86–1.14, opacity 0.72–1.0 so contact feels alive.
+    // Second slower harmonic gently modulates the amplitude so the junction breathes on two timescales.
     const base = 3.2 / z;
-    const scale = 0.88 + 0.24 * pulse;
+    const scale = 0.86 + 0.18 * pulse + 0.10 * pulseSlow;
     const diamond = base * scale;
     const alpha = 0.72 + 0.28 * pulse;
     ctx.strokeStyle = `rgba(63,198,255,${alpha.toFixed(3)})`;
@@ -381,7 +382,7 @@ export function drawDistributePreview(ctx: CanvasRenderingContext2D, plan: Distr
       ctx.strokeStyle = `rgba(63,198,255,${lagAlpha})`;
       ctx.lineWidth = 0.32 / z;
       // Short arc centred on the top peak, sweeping ~70° so it feels directional and quiet.
-      const lagStart = -Math.PI * 0.72;
+      const lagStart = -Math.PI * 0.72 + pulseRotate;
       const lagSweep = Math.PI * 0.38;
       ctx.beginPath();
       ctx.arc(cx, cy, lagR, lagStart, lagStart + lagSweep);
@@ -393,7 +394,7 @@ export function drawDistributePreview(ctx: CanvasRenderingContext2D, plan: Distr
       const counterAlpha = (alpha * 0.11 * (0.45 + 0.55 * pulse)).toFixed(3);
       ctx.strokeStyle = `rgba(63,198,255,${counterAlpha})`;
       ctx.lineWidth = 0.28 / z;
-      const counterStart = lagStart + Math.PI;
+      const counterStart = lagStart + Math.PI; // already includes pulseRotate via lagStart
       const counterSweep = Math.PI * 0.32;
       ctx.beginPath();
       ctx.arc(cx, cy, counterR, counterStart, counterStart + counterSweep);
