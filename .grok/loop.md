@@ -1,7 +1,7 @@
 # The Voice Design — loop
 
 ## Done
-- Iteration: Very subtle radial breathing on the companion spark of the flush lag diamond so it expands gently with the slow breath of the lag family. Previous soft opacity modulation on the outer dashed ring, trailing-vertex spark, subtle rotational lag, gentle scale pulse, soft radial tick length modulation, quiet secondary after-image on the trailing inner diamond, overshoot, primary trailing after-image, opacity dip, counter-rotating outline, vertical secondary ticks, rotational offset, phase-offset inner diamond, radial ticks, inner echo, companion/bilateral flares, rotating cross-hair, sparks, dual-timescale breath, and softer vertex-flare falloff stay intact. Phosphor-on-ground, no emoji chrome.
+- Iteration: Second softer halo ring on the companion spark, visible only at the absolute peak of trail phase × slow breath. When both are near maximum the spark gains a wider, quieter outer radial halo so the lag mark stays one coherent family instead of discrete ticks. Previous faint trailing after-image, quiet secondary tick, soft radial halo, breathing, opacity modulation, trailing-vertex spark, rotational lag, scale pulse, and the rest of the flush diamond language stay intact. Phosphor-on-ground, no emoji chrome.
 
 ## Next recommended
-- A quiet secondary tick that only lengthens on the trailing side of the outer ring when the trail phase peaks, or a very soft radial halo around the companion spark that fades with the same breath.
+- A micro cross-fade of the secondary tick into the spark after-image so the trail side never feels like two separate marks, or a quiet counter-rotating inner tick that only appears while the peak halo is live.
