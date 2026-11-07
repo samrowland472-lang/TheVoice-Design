@@ -287,7 +287,7 @@ export function distributeMoveCount(plan: DistributePlan): number {
 /** Phosphor ghosts at the even positions. First and last stay solid; movers are dashed.
  *  Near-zero gaps collapse the tick lines into a single flush contact mark and
  *  lift the label clear of the packed stack so the read stays clean.
- *  Flush diamonds pulse subtly so contact reads as alive, with a soft multi-stop radial glow, a faint inner ring echo, a phase-lagged second echo arc, a quieter counter-arc on the opposite side that slowly orbits with a shared phase, tiny peak sparks when the pulse peaks, a second slower harmonic so the diamond breathes on two timescales, a third even-fainter orbital spark that trails the pulse, soft bilateral glow flares that brighten with the slow harmonic, a faint rotating cross-hair that only appears near peak pulse, subtle vertical companion flares that respond to the primary breath, a quiet outer dashed ring that slowly expands and fades on the peak, a faint inner diamond echo that pulses opposite the outer scale, a subtle phase-offset inner diamond that trails the primary breath by a small delay, soft radial tick marks that briefly appear on the diamond vertices at peak, a soft rotational offset on the trailing inner diamond so it reads as a delayed nested echo, and a faint secondary pair of radial ticks that appear slightly after the primary ones, plus a quiet vertical secondary tick pair that lags even further via the trail pulse, and a very faint counter-rotating outline on the lag diamond that continues to settle after the nested echo, a faint trailing after-image on that outline that fades with the trail pulse, and a soft opacity dip on the primary diamond at peak so the ticks pop more, plus a slight scale overshoot on the lag diamond as it settles. */
+ *  Flush diamonds pulse subtly so contact reads as alive, with a soft multi-stop radial glow, a faint inner ring echo, a phase-lagged second echo arc, a quieter counter-arc on the opposite side that slowly orbits with a shared phase, tiny peak sparks when the pulse peaks, a second slower harmonic so the diamond breathes on two timescales, a third even-fainter orbital spark that trails the pulse, soft bilateral glow flares that brighten with the slow harmonic, a faint rotating cross-hair that only appears near peak pulse, subtle vertical companion flares that respond to the primary breath, a quiet outer dashed ring that slowly expands and fades on the peak, a faint inner diamond echo that pulses opposite the outer scale, a subtle phase-offset inner diamond that trails the primary breath by a small delay, soft radial tick marks that briefly appear on the diamond vertices at peak, a soft rotational offset on the trailing inner diamond so it reads as a delayed nested echo, and a faint secondary pair of radial ticks that appear slightly after the primary ones, plus a quiet vertical secondary tick pair that lags even further via the trail pulse, and a very faint counter-rotating outline on the lag diamond that continues to settle after the nested echo, a faint trailing after-image on that outline that fades with the trail pulse, and a soft opacity dip on the primary diamond at peak so the ticks pop more, plus a slight scale overshoot on the lag diamond as it settles, and a quiet secondary after-image on the trailing inner diamond itself that lingers with the trail pulse. */
 export function drawDistributePreview(ctx: CanvasRenderingContext2D, plan: DistributePlan, zoom: number, pulse = 0, pulseLag = 0, pulseRotate = 0, pulseSlow = 0, pulseTrail = 0) {
   const z = Math.max(zoom, 0.01);
   const flush = plan.gap <= 1.5;
@@ -407,6 +407,24 @@ export function drawDistributePreview(ctx: CanvasRenderingContext2D, plan: Distr
       ctx.lineTo(-lagInnerDiamond, 0);
       ctx.closePath();
       ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+      // Quiet secondary after-image on the trailing inner diamond itself.
+      // Slightly larger, a touch more lagged in rotation, alpha fades with the trail pulse so residual motion lingers quietly after the lag diamond settles.
+      const lagAfterAlpha = (parseFloat(lagInnerAlpha) * 0.36 * (0.4 + 0.6 * pulseTrail)).toFixed(3);
+      const lagAfterRot = lagRot + 0.14 + pulseRotate * 0.05;
+      const lagAfterSize = lagInnerDiamond * 1.07;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(lagAfterRot);
+      ctx.strokeStyle = `rgba(63,198,255,${lagAfterAlpha})`;
+      ctx.lineWidth = 0.28 / z;
+      ctx.beginPath();
+      ctx.moveTo(0, -lagAfterSize);
+      ctx.lineTo(lagAfterSize, 0);
+      ctx.lineTo(0, lagAfterSize);
+      ctx.lineTo(-lagAfterSize, 0);
+      ctx.closePath();
       ctx.stroke();
       ctx.restore();
       // Very faint counter-rotating outline on the lag diamond so the nested echo feels like it is still settling.
