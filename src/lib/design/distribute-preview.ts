@@ -302,6 +302,40 @@ export function drawDistributePreview(
           ctx.lineCap = "round";
           ctx.stroke();
         }
+
+        // Third even quieter counter-arc — drifts opposite the first so the lag
+        // family reads as one continuous breath. Only at the absolute peak of
+        // the outer halo, with its own slow counter-phase.
+        if (peak > 0.94) {
+          const oppAng = counterAng + Math.PI * 0.92;
+          const oppBreath = 0.5 + 0.5 * Math.sin(slow * 3.4 + Math.PI * 0.7);
+          const oppOpacity = 0.055 * (peak - 0.92) * oppBreath;
+          const oppR = sparkSize * (2.15 + 0.18 * oppBreath);
+          const oppStart = oppAng - 0.42;
+          const oppEnd = oppAng + 0.28;
+          ctx.beginPath();
+          ctx.arc(0, 0, oppR, oppStart, oppEnd);
+          ctx.strokeStyle = `rgba(160, 230, 255, ${oppOpacity})`;
+          ctx.lineWidth = 0.32 / z;
+          ctx.lineCap = "round";
+          ctx.stroke();
+
+          // Faint opposing filament — only when the third arc’s own breath is near peak,
+          // so the continuous breath softens further into one fluid lag family.
+          if (oppBreath > 0.85) {
+            const oppFilamentBreath = (oppBreath - 0.85) / 0.15;
+            const oppFilamentOpacity = 0.032 * oppFilamentBreath * (peak - 0.92);
+            const oppFilamentStart = oppStart - 0.12;
+            const oppFilamentEnd = oppStart + 0.18;
+            const oppFilamentR = oppR * (0.96 - 0.04 * oppFilamentBreath);
+            ctx.beginPath();
+            ctx.arc(0, 0, oppFilamentR, oppFilamentStart, oppFilamentEnd);
+            ctx.strokeStyle = `rgba(140, 210, 255, ${oppFilamentOpacity})`;
+            ctx.lineWidth = 0.22 / z;
+            ctx.lineCap = "round";
+            ctx.stroke();
+          }
+        }
       }
       // Soft cross-fade bridge toward the trailing after-image
       if (trailPhase > 0.68 && fade > 0.15) {
