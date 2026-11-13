@@ -166,7 +166,12 @@ function buildPlan(
  * fifth mark only near the absolute peak of the trail breath. Trail spark
  * carries a micro-taper so extreme contact reads as one continuous breath.
  * Outer slow harmonic is quieter at rest. Trail spark gains a soft contact bloom
- * near diamond points. Faint radial falloff grounds the family. All members inherit familyLagRot. Phosphor-on-ground.
+ * near diamond points. Faint radial falloff grounds the family. Primary diamond
+ * carries a faint inner glow that breathes with the pulse. Lag companion rotation
+ * offset micro-adjusted for tighter family cohesion. Fifth nested mark quieted further.
+ * All members inherit familyLagRot. Shared stroke-width breathing across the nested
+ * family, plus a soft outer halo on the primary diamond at peak pulse.
+ * Phosphor-on-ground.
  */
 export function drawDistributePreview(
   ctx: CanvasRenderingContext2D,
@@ -206,17 +211,50 @@ export function drawDistributePreview(
   ctx.fill();
 
   const pScale = 1 + 0.18 * (pulse - 0.5);
-  drawDiamond(ctx, baseR * pScale, `rgba(63, 198, 255, ${0.55 + 0.35 * pulse})`, zoom);
+  const primaryR = baseR * pScale;
+
+  // Shared stroke-width breathing across the nested family
+  const familyBreath = 0.45 * pulse + 0.35 * lag + 0.2 * slow;
+  const strokeBreath = 1 + 0.2 * (familyBreath - 0.5);
+
+  // Soft outer halo on the primary diamond at peak pulse
+  if (pulse > 0.72) {
+    const haloR = primaryR * 1.18;
+    const haloA = 0.028 * ((pulse - 0.72) / 0.28);
+    ctx.beginPath();
+    ctx.moveTo(0, -haloR);
+    ctx.lineTo(haloR, 0);
+    ctx.lineTo(0, haloR);
+    ctx.lineTo(-haloR, 0);
+    ctx.closePath();
+    ctx.strokeStyle = `rgba(63, 198, 255, ${haloA})`;
+    ctx.lineWidth = Math.max(0.8, 1.6 / zoom) * strokeBreath;
+    ctx.stroke();
+  }
+
+  // Faint inner glow that breathes with the pulse — softer fill inside the primary diamond
+  const glowR = primaryR * 0.62;
+  const glowA = 0.045 + 0.055 * pulse;
+  ctx.beginPath();
+  ctx.moveTo(0, -glowR);
+  ctx.lineTo(glowR, 0);
+  ctx.lineTo(0, glowR);
+  ctx.lineTo(-glowR, 0);
+  ctx.closePath();
+  ctx.fillStyle = `rgba(63, 198, 255, ${glowA})`;
+  ctx.fill();
+  drawDiamond(ctx, primaryR, `rgba(63, 198, 255, ${0.55 + 0.35 * pulse})`, zoom, strokeBreath);
 
   const lScale = 1 + 0.12 * (lag - 0.5);
   ctx.save();
-  ctx.rotate(0.4);
-  drawDiamond(ctx, baseR * 0.72 * lScale, `rgba(63, 198, 255, ${0.28 + 0.22 * lag})`, zoom);
+  // Micro-adjusted rotation offset for tighter family cohesion with the primary diamond
+  ctx.rotate(0.31);
+  drawDiamond(ctx, baseR * 0.72 * lScale, `rgba(63, 198, 255, ${0.28 + 0.22 * lag})`, zoom, strokeBreath);
   ctx.restore();
 
   const sScale = 1 + 0.08 * (slow - 0.5);
   // Quieter outer slow harmonic so the nested family stays softer at rest
-  drawDiamond(ctx, baseR * 1.35 * sScale, `rgba(63, 198, 255, ${0.07 + 0.06 * slow})`, zoom);
+  drawDiamond(ctx, baseR * 1.35 * sScale, `rgba(63, 198, 255, ${0.07 + 0.06 * slow})`, zoom, strokeBreath * 0.85);
 
   const tAng = trail * Math.PI * 2;
   const tR = baseR * 1.6;
@@ -251,7 +289,7 @@ export function drawDistributePreview(
     { idx: 2, size: 0.62, op: 0.22, breath: lag },
     { idx: 3, size: 0.48, op: 0.14, breath: slow },
     { idx: 4, size: 0.36, op: 0.09, breath: trail },
-    { idx: 5, size: 0.16, op: 0.028, breath: trail * 0.48 },
+    { idx: 5, size: 0.13, op: 0.016, breath: trail * 0.48 },
   ];
 
   for (const m of marks) {
@@ -263,14 +301,14 @@ export function drawDistributePreview(
     const alpha = m.op * (0.45 + 0.55 * rel);
     ctx.save();
     ctx.rotate(m.idx * 0.18);
-    drawDiamond(ctx, baseR * m.size * mScale, `rgba(63, 198, 255, ${alpha})`, zoom);
+    drawDiamond(ctx, baseR * m.size * mScale, `rgba(63, 198, 255, ${alpha})`, zoom, strokeBreath);
     ctx.restore();
   }
 
   ctx.restore();
 }
 
-function drawDiamond(ctx: CanvasRenderingContext2D, r: number, style: string, zoom: number) {
+function drawDiamond(ctx: CanvasRenderingContext2D, r: number, style: string, zoom: number, strokeMul = 1) {
   ctx.beginPath();
   ctx.moveTo(0, -r);
   ctx.lineTo(r, 0);
@@ -278,6 +316,6 @@ function drawDiamond(ctx: CanvasRenderingContext2D, r: number, style: string, zo
   ctx.lineTo(-r, 0);
   ctx.closePath();
   ctx.strokeStyle = style;
-  ctx.lineWidth = Math.max(0.6, 1.1 / zoom);
+  ctx.lineWidth = Math.max(0.6, 1.1 / zoom) * strokeMul;
   ctx.stroke();
 }
