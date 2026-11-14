@@ -1,7 +1,7 @@
 # The Voice Design — loop
 
 ## Done
-- Iteration: Restored the broken distribute-preview module (was a SEE_FILE stub) so layer distribute live-preview, arm, commit, and gap formatting work again. Added a phosphor flush-contact diamond bloom with phase-lagged secondary echo, orbital spark trail, radial falloff rings, and a tighter fifth nested mark inheriting familyLagRot. Ground falloff kept quiet. Phosphor-on-ground, no emoji chrome.
+- Iteration: Added a subtle scale pulse on the flush-diamond gap readout so the text breathes with the primary diamond pulse (0.94–1.00). Extracted the readout fade and scale curves into named constants so the contact treatment stays tunable without competing chrome. Phosphor-on-ground, no emoji.
 
 ## Next recommended
-- Optionally add gap-tick labels that fade into the flush diamond, or let the orbital spark inherit a second slower harmonic so the contact bloom feels more layered on long holds.
+- Optionally add a matching lag-echo scale on the readout using flushPulseLag, or expose the diamond bloom constants the same way.
