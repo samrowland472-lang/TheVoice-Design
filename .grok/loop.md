@@ -1,7 +1,7 @@
 # The Voice Design — loop
 
 ## Done
-- Iteration: Deepened the counter-breath with a faint phase offset on the slow harmonic. Outer lag companion and nested slow mark now trail the core expansion more clearly, and bloom falloff is quieter at rest. Phosphor-on-ground, no emoji chrome.
+- Iteration: Restored the broken distribute-preview module (was a SEE_FILE stub) so layer distribute live-preview, arm, commit, and gap formatting work again. Added a phosphor flush-contact diamond bloom with phase-lagged secondary echo, orbital spark trail, radial falloff rings, and a tighter fifth nested mark inheriting familyLagRot. Ground falloff kept quiet. Phosphor-on-ground, no emoji chrome.
 
 ## Next recommended
-- Optionally add a micro secondary phase lag on the trail spark's contact bloom so the orbital spark trails the counter-breath more distinctly, or quiet the ground falloff further during slow-harmonic rest.
+- Optionally add gap-tick labels that fade into the flush diamond, or let the orbital spark inherit a second slower harmonic so the contact bloom feels more layered on long holds.
