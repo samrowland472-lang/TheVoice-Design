@@ -8,6 +8,7 @@ import {
   snapGuideToObjects,
 } from "@/lib/design/snap-guide";
 import { canDistributeGuides, sanitizeGuideLabel } from "@/lib/design/guide-select";
+import { GUIDE_COLORS, GUIDE_DASHES, cycleGuideColor, cycleGuideDash, resolveGuideStroke } from "@/lib/design/guide-style";
 import { useDesign } from "@/lib/design/store";
 import { setStudioStatus } from "@/lib/design/studio-status";
 import "@/lib/design/guide-live";
@@ -66,6 +67,7 @@ export function InspectorPrint() {
   const distributeSelectedGuides = useDesign((s) => s.distributeSelectedGuides);
   const lockSelectedGuides = useDesign((s) => s.lockSelectedGuides);
   const unlockSelectedGuides = useDesign((s) => s.unlockSelectedGuides);
+  const setSelectedGuidesDash = useDesign((s) => s.setSelectedGuidesDash);
   const patchGuide = useDesign((s) => s.patchGuide);
   const probe = useDesign((s) => s.guideProbe);
 
@@ -237,6 +239,66 @@ export function InspectorPrint() {
           >
             Unlock
           </button>
+          <button
+            type="button"
+            disabled={!guides.length}
+            className={cn(
+              "h-7 rounded-[8px] border border-border px-1.5 font-mono text-[10px] text-ink-dim hover:border-phosphor hover:text-ink",
+              !guides.length && "opacity-40",
+            )}
+            title="Set dash on selected guides (or all if none selected)"
+            onClick={() => {
+              setSelectedGuidesDash?.("dash");
+              setStudioStatus("Guide dash set to dash");
+            }}
+          >
+            Dash
+          </button>
+          <button
+            type="button"
+            disabled={!guides.length}
+            className={cn(
+              "h-7 rounded-[8px] border border-border px-1.5 font-mono text-[10px] text-ink-dim hover:border-phosphor hover:text-ink",
+              !guides.length && "opacity-40",
+            )}
+            title="Set tight dash on selected guides (or all if none selected)"
+            onClick={() => {
+              setSelectedGuidesDash?.("tight");
+              setStudioStatus("Guide dash set to tight");
+            }}
+          >
+            Tight
+          </button>
+          <button
+            type="button"
+            disabled={!guides.length}
+            className={cn(
+              "h-7 rounded-[8px] border border-border px-1.5 font-mono text-[10px] text-ink-dim hover:border-phosphor hover:text-ink",
+              !guides.length && "opacity-40",
+            )}
+            title="Set solid on selected guides (or all if none selected)"
+            onClick={() => {
+              setSelectedGuidesDash?.("solid");
+              setStudioStatus("Guide dash set to solid");
+            }}
+          >
+            Solid
+          </button>
+          <button
+            type="button"
+            disabled={!guides.length}
+            className={cn(
+              "h-7 rounded-[8px] border border-border px-1.5 font-mono text-[10px] text-ink-dim hover:border-phosphor hover:text-ink",
+              !guides.length && "opacity-40",
+            )}
+            title="Clear dash override on selected guides (or all if none selected)"
+            onClick={() => {
+              setSelectedGuidesDash?.(undefined);
+              setStudioStatus("Guide dash cleared");
+            }}
+          >
+            None
+          </button>
         </div>
         {probe ? (
           <p className="mb-1 font-mono text-[10px] text-phosphor">{formatGuideProbe(probe)}</p>
@@ -298,6 +360,48 @@ export function InspectorPrint() {
                     setStudioStatus(next ? `Guide labeled “${next}”` : "Guide label cleared");
                   }}
                 />
+                <button
+                  type="button"
+                  className="h-7 w-7 shrink-0 rounded-[6px] border border-border"
+                  style={{ background: resolveGuideStroke(g).color }}
+                  aria-label="cycle guide color"
+                  title="Cycle color override (click same to clear)"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const looks = useDesign.getState().guideLooks;
+                    const current = resolveGuideStroke(g, looks).color;
+                    const idx = GUIDE_COLORS.findIndex((c) => c.hex.toLowerCase() === current.toLowerCase());
+                    const next = GUIDE_COLORS[(idx + 1) % GUIDE_COLORS.length]!;
+                    const override = cycleGuideColor(g.color, next.hex);
+                    const s = useDesign.getState();
+                    s.commit?.();
+                    patchGuide?.(g.id, { color: override });
+                    setStudioStatus(override ? `Guide color ${next.id}` : "Guide color cleared");
+                  }}
+                />
+                <button
+                  type="button"
+                  className={cn(
+                    "h-7 shrink-0 rounded-[6px] border border-border px-1 font-mono text-[9px]",
+                    g.dash ? "border-phosphor text-phosphor" : "text-ink-dim",
+                  )}
+                  aria-label="cycle guide dash"
+                  title="Cycle dash override (solid / dash / tight). Click current to clear."
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const looks = useDesign.getState().guideLooks;
+                    const current = resolveGuideStroke(g, looks).dash;
+                    const idx = GUIDE_DASHES.indexOf(current);
+                    const next = GUIDE_DASHES[(idx + 1) % GUIDE_DASHES.length]!;
+                    const override = cycleGuideDash(g.dash, next);
+                    const s = useDesign.getState();
+                    s.commit?.();
+                    patchGuide?.(g.id, { dash: override });
+                    setStudioStatus(override ? `Guide dash ${override}` : "Guide dash cleared");
+                  }}
+                >
+                  {g.dash ? g.dash.slice(0, 1).toUpperCase() : "—"}
+                </button>
                 <button
                   type="button"
                   className={cn(

@@ -781,7 +781,7 @@ export const useDesign = create<any>((set: any, get: any) => ({
     if (!doc) return;
     set({ doc: { ...doc, guides: [] }, dirty: true, guideSelection: [] });
   },
-  patchGuide: (id: string, patch: Partial<{ locked?: boolean; hidden?: boolean; pos?: number; label?: string; color?: string }>) => {
+  patchGuide: (id: string, patch: Partial<{ locked?: boolean; hidden?: boolean; pos?: number; label?: string; color?: string; dash?: "solid" | "dash" | "tight" }>) => {
     const { doc } = get();
     if (!doc) return;
     set({
@@ -834,6 +834,28 @@ export const useDesign = create<any>((set: any, get: any) => ({
   },
   unlockSelectedGuides: () => {
     get().lockSelectedGuides(false);
+  },
+  setSelectedGuidesDash: (dash: "solid" | "dash" | "tight" | undefined) => {
+    const { doc, guideSelection } = get();
+    if (!doc) return;
+    const guides = doc.guides ?? [];
+    if (!guides.length) return;
+    const ids = guideSelection?.length ? new Set(guideSelection) : null;
+    get().commit();
+    set({
+      doc: {
+        ...doc,
+        guides: guides.map((g) => {
+          if (ids && !ids.has(g.id)) return g;
+          if (dash === undefined) {
+            const { dash: _drop, ...rest } = g;
+            return rest;
+          }
+          return { ...g, dash };
+        }),
+      },
+      dirty: true,
+    });
   },
   setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
   togglePrintMarks: () => set({ printMarks: !get().printMarks }),
