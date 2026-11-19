@@ -24,7 +24,7 @@ import type { GuideSet } from "./snap";
 import { isGroup } from "./types";
 import { applyLayerDrop, makeGroup, nudgeLayer, reverseSelectedStacking, ungroup, withDescendants, type LayerDrop } from "./groups";
 import { applyIsolate } from "./layers-isolate";
-import type { BrandKit, DesignDocument, DesignNode, PathNode, Tool, Viewport } from "./types";
+import type { BrandKit, DesignDocument, DesignNode, PathNode, Shadow, Tool, Viewport } from "./types";
 import type { StrokeGhost } from "./stroke-ghost";
 
 export type StyleClipboard = {
@@ -33,6 +33,7 @@ export type StyleClipboard = {
   strokeWidth: number;
   opacity: number;
   blend: string;
+  shadow: Shadow | null;
 };
 
 const MAX_HISTORY = 60;
@@ -726,10 +727,12 @@ export const useDesign = create<any>((set: any, get: any) => ({
       strokeWidth: src.strokeWidth,
       opacity: src.opacity,
       blend: src.blend,
+      shadow: src.shadow ? structuredClone(src.shadow) : null,
     };
     const mixed = nodes.length > 1 && nodes.some((n) =>
       n.fill !== src.fill || n.stroke !== src.stroke || n.strokeWidth !== src.strokeWidth ||
-      n.opacity !== src.opacity || n.blend !== src.blend
+      n.opacity !== src.opacity || n.blend !== src.blend ||
+      JSON.stringify(n.shadow) !== JSON.stringify(src.shadow)
     );
     set({ styleClipboard: style });
     setStudioStatus(`Copied style${mixed ? " (mixed — first layer)" : ""}`);
@@ -743,6 +746,7 @@ export const useDesign = create<any>((set: any, get: any) => ({
       strokeWidth: styleClipboard.strokeWidth,
       opacity: styleClipboard.opacity,
       blend: styleClipboard.blend,
+      shadow: styleClipboard.shadow ? structuredClone(styleClipboard.shadow) : null,
     }, true);
     setStudioStatus("Pasted style");
   },
