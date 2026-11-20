@@ -34,39 +34,23 @@ import { PresentView } from "./present-chrome";
 
 export function StudioApp({ id }: { id: string }) {
   const navigate = useNavigate();
-  const open = useDesign((s) => s.open);
   const doc = useDesign((s) => s.doc);
   const selection = useDesign((s) => s.selection);
-  const brand = useDesign((s) => s.brand);
-  const color = useDesign((s) => s.color);
-  const save = useDesign((s) => s.save);
   const present = useDesign((s) => s.present);
   const paletteOpen = useDesign((s) => s.paletteOpen);
   const setPaletteOpen = useDesign((s) => s.setPaletteOpen);
-  const [sheet, setSheet] = useState<"layers" | "inspect" | "ai" | null>(null);
-  useShortcuts();
+  const save = useDesign((s) => s.save);
 
   useEffect(() => {
     watchFontsForWrapCache();
   }, []);
 
   useEffect(() => {
-    open(id);
-    if (!useDesign.getState().doc) {
-      void navigate({ to: "/" });
-    }
-  }, [id, open, navigate]);
-
-  useEffect(() => {
-    const t = window.setInterval(() => {
-      if (useDesign.getState().dirty) useDesign.getState().save();
-    }, 8000);
-    return () => window.clearTimeout(t);
-  }, []);
-
-  useEffect(() => {
-    const onLeave = () => {
-      if (useDesign.getState().dirty) save();
+    const onLeave = (e: BeforeUnloadEvent) => {
+      if (useDesign.getState().dirty) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
     };
     window.addEventListener("beforeunload", onLeave);
     return () => window.removeEventListener("beforeunload", onLeave);
@@ -129,6 +113,16 @@ export function StudioApp({ id }: { id: string }) {
           setStudioStatus(`Guide preset: ${preset.label}`);
         },
       })),
+      {
+        id: "guide-look-reset",
+        label: "Reset guide look (color + dash)",
+        group: "Print",
+        run: () => {
+          s().setSelectedGuidesColor?.(undefined);
+          s().setSelectedGuidesDash?.(undefined);
+          setStudioStatus("Guide look cleared");
+        },
+      },
     ];
   }, [navigate]);
 
@@ -160,70 +154,23 @@ export function StudioApp({ id }: { id: string }) {
           </div>
           <PaintDock />
         </div>
-        <aside className="hidden w-[280px] shrink-0 flex-col border-l border-border bg-surface md:flex">
-          <div className="min-h-0 flex-1 overflow-auto">
-            <LayersPanel />
-          </div>
-          <div className="min-h-0 flex-1 overflow-auto">
-            {selectedNodes.length >= 2 && (
-              <div className="px-3">
-                <MixedInk nodes={selectedNodes} brandColors={brand.colors} ink={color} />
-                {selectedText.length >= 2 && <MixedType nodes={selectedText} />}
-              </div>
-            )}
-            <Inspector />
-          </div>
+        <div className="flex w-full shrink-0 flex-col border-t border-border md:w-[320px] md:border-t-0 md:border-l">
+          <LayersPanel />
+          <Inspector />
+          {selectedNodes.length > 1 && (
+            <MixedInk
+              nodes={selectedNodes}
+              brandColors={useDesign.getState().brand.colors}
+              ink={useDesign.getState().color}
+            />
+          )}
+          {selectedText.length > 0 && <MixedType nodes={selectedText} />}
           <AiPanel />
-        </aside>
+        </div>
       </div>
       <StudioStatusStrip />
-      <div className="flex shrink-0 border-t border-border md:hidden">
-        {(["layers", "inspect", "ai"] as const).map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => setSheet(sheet === tab ? null : tab)}
-            className={cn(
-              "h-12 flex-1 text-xs font-medium capitalize",
-              sheet === tab ? "text-phosphor" : "text-ink-dim",
-            )}
-          >
-            {tab === "ai" ? "Director" : tab === "inspect" ? "Inspect" : "Layers"}
-          </button>
-        ))}
-      </div>
-      {sheet && (
-        <div className="fixed inset-0 z-40 md:hidden">
-          <button type="button" className="absolute inset-0 bg-ground/70" aria-label="Close sheet" onClick={() => setSheet(null)} />
-          <div className="absolute inset-x-0 bottom-0 flex max-h-[75vh] flex-col rounded-t-[20px] border-t border-border bg-surface">
-            <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-4">
-              <span className="font-mono text-[10px] tracking-[0.2em] text-phosphor uppercase">
-                {sheet === "ai" ? "Director" : sheet === "inspect" ? "Inspect" : "Layers"}
-              </span>
-              <button type="button" className="text-xs text-ink-dim" onClick={() => setSheet(null)}>
-                Close
-              </button>
-            </div>
-            <div className="min-h-0 flex-1 overflow-auto">
-              {sheet === "layers" && <LayersPanel />}
-              {sheet === "inspect" && (
-                <>
-                  {selectedNodes.length >= 2 && (
-                    <div className="px-3">
-                      <MixedInk nodes={selectedNodes} brandColors={brand.colors} ink={color} />
-                      {selectedText.length >= 2 && <MixedType nodes={selectedText} />}
-                    </div>
-                  )}
-                  <Inspector />
-                </>
-              )}
-              {sheet === "ai" && <AiPanel />}
-            </div>
-          </div>
-        </div>
-      )}
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} commands={commands} />
-      <Toaster theme="dark" />
+      <Toaster theme="dark" position="bottom-right" />
     </div>
   );
 }
