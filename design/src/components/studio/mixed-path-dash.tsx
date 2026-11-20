@@ -1,3 +1,4 @@
+import { setStudioStatus } from "@/lib/design/studio-status";
 import {
   capChipLabel,
   dashChipLabel,
@@ -17,6 +18,20 @@ import { NumField } from "./num-field";
 const CAPS: CanvasLineCap[] = ["butt", "round", "square"];
 const JOINS: CanvasLineJoin[] = ["miter", "round", "bevel"];
 const OUTLINE_KINDS = new Set(["path", "rect", "ellipse", "line", "polygon", "star", "arrow"]);
+
+const LOOK_PRESETS: {
+  label: string;
+  dash: number;
+  offset: number;
+  cap: CanvasLineCap;
+  join: CanvasLineJoin;
+}[] = [
+  { label: "Clean", dash: 0, offset: 0, cap: "round", join: "round" },
+  { label: "Sharp", dash: 0, offset: 0, cap: "butt", join: "miter" },
+  { label: "Dotted", dash: 2, offset: 0, cap: "round", join: "round" },
+  { label: "Dashed", dash: 8, offset: 0, cap: "square", join: "bevel" },
+  { label: "Long", dash: 16, offset: 0, cap: "butt", join: "miter" },
+];
 
 function dashKey(n: DesignNode) {
   return Math.round((n.strokeDash ?? 0) * 100) / 100;
@@ -328,6 +343,51 @@ export function MixedPathDash({ nodes }: { nodes: DesignNode[] }) {
           </button>
         ))}
       </div>
+      <div className="mt-2 flex flex-wrap gap-1" aria-label="stroke look presets">
+        {LOOK_PRESETS.map((preset) => (
+          <button
+            key={preset.label}
+            type="button"
+            className="rounded border border-phosphor/40 bg-surface-alt px-1.5 py-0.5 text-[10px] text-phosphor hover:bg-phosphor/10"
+            title={`Apply ${preset.label} look (cap ${preset.cap}, join ${preset.join}, dash ${preset.dash}) to selected outlines`}
+            aria-label={`Apply ${preset.label} stroke look`}
+            onClick={() => {
+              updateNodes(
+                ids,
+                {
+                  strokeDash: preset.dash,
+                  strokeDashOffset: preset.offset,
+                  lineCap: preset.cap,
+                  lineJoin: preset.join,
+                },
+                true,
+              );
+              setStudioStatus(`${preset.label} look on ${ids.length} outline${ids.length === 1 ? "" : "s"}`);
+              ghostStroke(null);
+            }}
+            onMouseEnter={() =>
+              ghostStroke({
+                strokeDash: preset.dash,
+                strokeDashOffset: preset.offset,
+                lineCap: preset.cap,
+                lineJoin: preset.join,
+              })
+            }
+            onMouseLeave={() => ghostStroke(null)}
+            onFocus={() =>
+              ghostStroke({
+                strokeDash: preset.dash,
+                strokeDashOffset: preset.offset,
+                lineCap: preset.cap,
+                lineJoin: preset.join,
+              })
+            }
+            onBlur={() => ghostStroke(null)}
+          >
+            {preset.label}
+          </button>
+        ))}
+      </div>
       {mixed && (
         <div className="mt-1 flex flex-wrap gap-1">
           {outlines.map((n) => {
@@ -434,6 +494,30 @@ export function MixedPathDash({ nodes }: { nodes: DesignNode[] }) {
           ))}
         </select>
       </Field>
+      <div className="mt-1 flex flex-wrap gap-1" aria-label="line cap presets">
+        {CAPS.map((id) => (
+          <button
+            key={id}
+            type="button"
+            className={cn(
+              "flex h-7 items-center gap-1 rounded-full border px-2 font-mono text-[8px]",
+              !mixedCap && cap === id
+                ? "border-phosphor bg-phosphor/15 text-phosphor"
+                : "border-phosphor/40 bg-surface-alt text-phosphor hover:bg-phosphor/10",
+            )}
+            title={`Set line cap to ${capChipLabel(id)} on selected outlines`}
+            aria-label={`Set line cap to ${capChipLabel(id)}`}
+            onMouseEnter={() => ghostStroke({ lineCap: id })}
+            onFocus={() => ghostStroke({ lineCap: id })}
+            onMouseLeave={() => ghostStroke(null)}
+            onBlur={() => ghostStroke(null)}
+            onClick={() => updateNodes(ids, { lineCap: id }, true)}
+          >
+            <CapIcon cap={id} />
+            <span>{capChipLabel(id)}</span>
+          </button>
+        ))}
+      </div>
       {mixedCap && <MixedCapLegend outlines={outlines} />}
       {mixedCap && (
         <div className="mt-1 flex flex-wrap gap-1">
@@ -482,6 +566,30 @@ export function MixedPathDash({ nodes }: { nodes: DesignNode[] }) {
           ))}
         </select>
       </Field>
+      <div className="mt-1 flex flex-wrap gap-1" aria-label="line join presets">
+        {JOINS.map((id) => (
+          <button
+            key={id}
+            type="button"
+            className={cn(
+              "flex h-7 items-center gap-1 rounded-full border px-2 font-mono text-[8px]",
+              !mixedJoin && join === id
+                ? "border-phosphor bg-phosphor/15 text-phosphor"
+                : "border-phosphor/40 bg-surface-alt text-phosphor hover:bg-phosphor/10",
+            )}
+            title={`Set line join to ${joinChipLabel(id)} on selected outlines`}
+            aria-label={`Set line join to ${joinChipLabel(id)}`}
+            onMouseEnter={() => ghostStroke({ lineJoin: id })}
+            onFocus={() => ghostStroke({ lineJoin: id })}
+            onMouseLeave={() => ghostStroke(null)}
+            onBlur={() => ghostStroke(null)}
+            onClick={() => updateNodes(ids, { lineJoin: id }, true)}
+          >
+            <JoinIcon join={id} />
+            <span>{joinChipLabel(id)}</span>
+          </button>
+        ))}
+      </div>
       {mixedJoin && <MixedJoinLegend outlines={outlines} />}
       {mixedJoin && (
         <div className="mt-1 flex flex-wrap gap-1">
