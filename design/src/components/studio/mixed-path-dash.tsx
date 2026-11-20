@@ -1,4 +1,3 @@
-import { setStudioStatus } from "@/lib/design/studio-status";
 import {
   capChipLabel,
   dashChipLabel,
@@ -9,6 +8,7 @@ import {
   sidesChipLabel,
   strokeRhythmChipLabel,
 } from "@/lib/design/geometry-chips";
+import { setStudioStatus } from "@/lib/design/studio-status";
 import { useDesign } from "@/lib/design/store";
 import type { DesignNode } from "@/lib/design/types";
 import { cn } from "@/lib/utils";
@@ -18,26 +18,6 @@ import { NumField } from "./num-field";
 const CAPS: CanvasLineCap[] = ["butt", "round", "square"];
 const JOINS: CanvasLineJoin[] = ["miter", "round", "bevel"];
 const OUTLINE_KINDS = new Set(["path", "rect", "ellipse", "line", "polygon", "star", "arrow"]);
-
-const LOOK_PRESETS: {
-  label: string;
-  dash: number;
-  offset: number;
-  cap: CanvasLineCap;
-  join: CanvasLineJoin;
-}[] = [
-  { label: "Clean", dash: 0, offset: 0, cap: "round", join: "round" },
-  { label: "Sharp", dash: 0, offset: 0, cap: "butt", join: "miter" },
-  { label: "Dotted", dash: 2, offset: 0, cap: "round", join: "round" },
-  { label: "Dashed", dash: 8, offset: 0, cap: "square", join: "bevel" },
-  { label: "Long", dash: 16, offset: 0, cap: "butt", join: "miter" },
-];
-
-const MITER_PRESETS: { label: string; value: number }[] = [
-  { label: "Tight", value: 2 },
-  { label: "Default", value: 4 },
-  { label: "Loose", value: 10 },
-];
 
 function dashKey(n: DesignNode) {
   return Math.round((n.strokeDash ?? 0) * 100) / 100;
@@ -53,15 +33,6 @@ function offsetKey(n: DesignNode) {
 
 function miterKey(n: DesignNode) {
   return Math.round((n.miterLimit ?? 4) * 100) / 100;
-}
-
-function matchesLook(n: DesignNode, preset: (typeof LOOK_PRESETS)[number]) {
-  return (
-    (n.strokeDash ?? 0) === preset.dash &&
-    (n.strokeDashOffset ?? 0) === preset.offset &&
-    (n.lineCap ?? "round") === preset.cap &&
-    (n.lineJoin ?? "round") === preset.join
-  );
 }
 
 function chipClass() {
@@ -338,84 +309,32 @@ export function MixedPathDash({ nodes }: { nodes: DesignNode[] }) {
           { label: "Dot", dash: 2, offset: 0 },
           { label: "Long", dash: 16, offset: 0 },
           { label: "Gap", dash: 4, offset: 4 },
-        ].map((preset) => (
-          <button
-            key={preset.label}
-            type="button"
-            className="rounded border border-border px-1.5 py-0.5 text-[10px] text-ink-dim hover:bg-surface hover:text-ink"
-            title={`Apply ${preset.label} dash to selected outlines`}
-            aria-label={`Apply ${preset.label} dash preset`}
-            onClick={() => {
-              updateNodes(ids, { strokeDash: preset.dash, strokeDashOffset: preset.offset }, true);
-              ghostStroke(null);
-            }}
-            onMouseEnter={() => ghostStroke({ strokeDash: preset.dash, strokeDashOffset: preset.offset })}
-            onMouseLeave={() => ghostStroke(null)}
-            onFocus={() => ghostStroke({ strokeDash: preset.dash, strokeDashOffset: preset.offset })}
-            onBlur={() => ghostStroke(null)}
-          >
-            {preset.label}
-          </button>
-        ))}
-      </div>
-      <div className="mt-2 flex flex-wrap gap-1" aria-label="stroke look presets">
-        {LOOK_PRESETS.map((preset) => {
-          const isActive = outlines.every((n) => matchesLook(n, preset));
+        ].map((preset) => {
+          const active = !mixed && Math.abs(value - preset.dash) < 0.05 && Math.abs(offset - preset.offset) < 0.05;
           return (
             <button
               key={preset.label}
               type="button"
               className={cn(
-                "flex h-7 items-center gap-1 rounded border px-1.5 py-0.5 text-[10px]",
-                isActive
+                "rounded border px-1.5 py-0.5 text-[10px] transition-colors",
+                active
                   ? "border-phosphor bg-phosphor/15 text-phosphor"
-                  : "border-phosphor/40 bg-surface-alt text-phosphor hover:bg-phosphor/10",
+                  : "border-border text-ink-dim hover:bg-surface hover:text-ink",
               )}
-              title={`Apply ${preset.label} look (cap ${preset.cap}, join ${preset.join}, dash ${preset.dash}) to selected outlines`}
-              aria-label={`Apply ${preset.label} stroke look`}
-              aria-pressed={isActive}
+              title={`Apply ${preset.label} dash to selected outlines`}
+              aria-label={`Apply ${preset.label} dash preset`}
+              aria-pressed={active}
               onClick={() => {
-                const patch: {
-                  strokeDash: number;
-                  strokeDashOffset: number;
-                  lineCap: CanvasLineCap;
-                  lineJoin: CanvasLineJoin;
-                  miterLimit?: number;
-                } = {
-                  strokeDash: preset.dash,
-                  strokeDashOffset: preset.offset,
-                  lineCap: preset.cap,
-                  lineJoin: preset.join,
-                };
-                if (preset.join === "miter") patch.miterLimit = 4;
-                updateNodes(ids, patch, true);
-                setStudioStatus(`${preset.label} look on ${ids.length} outline${ids.length === 1 ? "" : "s"}`);
+                updateNodes(ids, { strokeDash: preset.dash, strokeDashOffset: preset.offset }, true);
                 ghostStroke(null);
+                setStudioStatus(`${preset.label} dash`);
               }}
-              onMouseEnter={() =>
-                ghostStroke({
-                  strokeDash: preset.dash,
-                  strokeDashOffset: preset.offset,
-                  lineCap: preset.cap,
-                  lineJoin: preset.join,
-                  ...(preset.join === "miter" ? { miterLimit: 4 } : {}),
-                })
-              }
+              onMouseEnter={() => ghostStroke({ strokeDash: preset.dash, strokeDashOffset: preset.offset })}
               onMouseLeave={() => ghostStroke(null)}
-              onFocus={() =>
-                ghostStroke({
-                  strokeDash: preset.dash,
-                  strokeDashOffset: preset.offset,
-                  lineCap: preset.cap,
-                  lineJoin: preset.join,
-                  ...(preset.join === "miter" ? { miterLimit: 4 } : {}),
-                })
-              }
+              onFocus={() => ghostStroke({ strokeDash: preset.dash, strokeDashOffset: preset.offset })}
               onBlur={() => ghostStroke(null)}
             >
-              <CapIcon cap={preset.cap} />
-              <JoinIcon join={preset.join} />
-              <span>{preset.label}</span>
+              {preset.label}
             </button>
           );
         })}
@@ -526,30 +445,6 @@ export function MixedPathDash({ nodes }: { nodes: DesignNode[] }) {
           ))}
         </select>
       </Field>
-      <div className="mt-1 flex flex-wrap gap-1" aria-label="line cap presets">
-        {CAPS.map((id) => (
-          <button
-            key={id}
-            type="button"
-            className={cn(
-              "flex h-7 items-center gap-1 rounded-full border px-2 font-mono text-[8px]",
-              !mixedCap && cap === id
-                ? "border-phosphor bg-phosphor/15 text-phosphor"
-                : "border-phosphor/40 bg-surface-alt text-phosphor hover:bg-phosphor/10",
-            )}
-            title={`Set line cap to ${capChipLabel(id)} on selected outlines`}
-            aria-label={`Set line cap to ${capChipLabel(id)}`}
-            onMouseEnter={() => ghostStroke({ lineCap: id })}
-            onFocus={() => ghostStroke({ lineCap: id })}
-            onMouseLeave={() => ghostStroke(null)}
-            onBlur={() => ghostStroke(null)}
-            onClick={() => updateNodes(ids, { lineCap: id }, true)}
-          >
-            <CapIcon cap={id} />
-            <span>{capChipLabel(id)}</span>
-          </button>
-        ))}
-      </div>
       {mixedCap && <MixedCapLegend outlines={outlines} />}
       {mixedCap && (
         <div className="mt-1 flex flex-wrap gap-1">
@@ -598,30 +493,6 @@ export function MixedPathDash({ nodes }: { nodes: DesignNode[] }) {
           ))}
         </select>
       </Field>
-      <div className="mt-1 flex flex-wrap gap-1" aria-label="line join presets">
-        {JOINS.map((id) => (
-          <button
-            key={id}
-            type="button"
-            className={cn(
-              "flex h-7 items-center gap-1 rounded-full border px-2 font-mono text-[8px]",
-              !mixedJoin && join === id
-                ? "border-phosphor bg-phosphor/15 text-phosphor"
-                : "border-phosphor/40 bg-surface-alt text-phosphor hover:bg-phosphor/10",
-            )}
-            title={`Set line join to ${joinChipLabel(id)} on selected outlines`}
-            aria-label={`Set line join to ${joinChipLabel(id)}`}
-            onMouseEnter={() => ghostStroke({ lineJoin: id })}
-            onFocus={() => ghostStroke({ lineJoin: id })}
-            onMouseLeave={() => ghostStroke(null)}
-            onBlur={() => ghostStroke(null)}
-            onClick={() => updateNodes(ids, { lineJoin: id }, true)}
-          >
-            <JoinIcon join={id} />
-            <span>{joinChipLabel(id)}</span>
-          </button>
-        ))}
-      </div>
       {mixedJoin && <MixedJoinLegend outlines={outlines} />}
       {mixedJoin && (
         <div className="mt-1 flex flex-wrap gap-1">
@@ -666,7 +537,6 @@ export function MixedPathDash({ nodes }: { nodes: DesignNode[] }) {
         </div>
       )}
       {(mixedJoin || join === "miter") && (
-        <>
         <Field label={mixedMiter ? "Miter · mixed" : `Miter ${Math.round(miter)}`}>
           <div className="flex items-center gap-2">
             <input
@@ -706,30 +576,37 @@ export function MixedPathDash({ nodes }: { nodes: DesignNode[] }) {
             />
           </div>
         </Field>
+      )}
+      {(mixedJoin || join === "miter") && (
         <div className="mt-1 flex flex-wrap gap-1" aria-label="miter limit presets">
-          {MITER_PRESETS.map((preset) => {
-            const isActive = !mixedMiter && Math.abs(miter - preset.value) < 0.05;
+          {[
+            { label: "Soft", value: 2 },
+            { label: "Default", value: 4 },
+            { label: "Sharp", value: 10 },
+            { label: "Hard", value: 20 },
+          ].map((preset) => {
+            const active = !mixedMiter && Math.abs(miter - preset.value) < 0.05;
             return (
               <button
                 key={preset.label}
                 type="button"
                 className={cn(
-                  "flex h-6 items-center rounded border px-2 text-[10px]",
-                  isActive
+                  "rounded border px-1.5 py-0.5 text-[10px] transition-colors",
+                  active
                     ? "border-phosphor bg-phosphor/15 text-phosphor"
-                    : "border-phosphor/40 bg-surface-alt text-phosphor hover:bg-phosphor/10",
+                    : "border-border text-ink-dim hover:bg-surface hover:text-ink",
                 )}
-                title={`Set miter limit to ${preset.value} on selected outlines`}
-                aria-label={`Apply ${preset.label} miter limit (${preset.value})`}
-                aria-pressed={isActive}
+                title={`Apply ${preset.label} miter limit (${preset.value}) to selected outlines`}
+                aria-label={`Apply ${preset.label} miter limit`}
+                aria-pressed={active}
                 onClick={() => {
-                  updateNodes(ids, { miterLimit: preset.value }, true);
-                  setStudioStatus(`${preset.label} miter (${preset.value}) on ${ids.length} outline${ids.length === 1 ? "" : "s"}`);
+                  updateNodes(ids, { miterLimit: preset.value, lineJoin: "miter" }, true);
                   ghostStroke(null);
+                  setStudioStatus(`${preset.label} miter · ${preset.value}`);
                 }}
-                onMouseEnter={() => ghostStroke({ miterLimit: preset.value })}
+                onMouseEnter={() => ghostStroke({ miterLimit: preset.value, lineJoin: "miter" })}
                 onMouseLeave={() => ghostStroke(null)}
-                onFocus={() => ghostStroke({ miterLimit: preset.value })}
+                onFocus={() => ghostStroke({ miterLimit: preset.value, lineJoin: "miter" })}
                 onBlur={() => ghostStroke(null)}
               >
                 {preset.label}
@@ -737,7 +614,6 @@ export function MixedPathDash({ nodes }: { nodes: DesignNode[] }) {
             );
           })}
         </div>
-        </>
       )}
       {mixedMiter && (
         <div className="mt-1 flex flex-wrap gap-1">
