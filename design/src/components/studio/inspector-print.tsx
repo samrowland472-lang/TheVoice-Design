@@ -7,7 +7,7 @@ import {
   guideProbe,
   snapGuideToObjects,
 } from "@/lib/design/snap-guide";
-import { canDistributeGuides, sanitizeGuideLabel } from "@/lib/design/guide-select";
+import { canDistributeGuides, canSpaceGuidesByGap, spaceGuidesByGap, sanitizeGuideLabel } from "@/lib/design/guide-select";
 import { GUIDE_COLORS, GUIDE_DASHES, GUIDE_LOOK_PRESETS, cycleGuideColor, cycleGuideDash, resolveGuideStroke } from "@/lib/design/guide-style";
 import { useDesign } from "@/lib/design/store";
 import { setStudioStatus } from "@/lib/design/studio-status";
@@ -49,6 +49,7 @@ export function InspectorPrint() {
   const setBleed = useDesign((s) => s.setBleed);
   const setBleedEdges = useDesign((s) => s.setBleedEdges);
   const [rail, setRail] = useState(false);
+  const [gapValue, setGapValue] = useState(40);
 
   useEffect(() => {
     setRail(loadPrintRail());
@@ -65,17 +66,24 @@ export function InspectorPrint() {
   const guideSelection = useDesign((s) => s.guideSelection) as string[] | undefined;
   const selectGuides = useDesign((s) => s.selectGuides);
   const distributeSelectedGuides = useDesign((s) => s.distributeSelectedGuides);
+  const spaceSelectedGuidesByGap = useDesign((s) => s.spaceSelectedGuidesByGap);
   const lockSelectedGuides = useDesign((s) => s.lockSelectedGuides);
   const unlockSelectedGuides = useDesign((s) => s.unlockSelectedGuides);
   const setSelectedGuidesDash = useDesign((s) => s.setSelectedGuidesDash);
   const setSelectedGuidesColor = useDesign((s) => s.setSelectedGuidesColor);
   const patchGuide = useDesign((s) => s.patchGuide);
   const probe = useDesign((s) => s.guideProbe);
+  const guideGapPreview = useDesign((s) => s.guideGapPreview) as number | null | undefined;
 
   if (!doc) return null;
   const edges = resolveBleed(doc);
   const uniform = uniformBleed(edges);
   const guides = doc.guides ?? [];
+  const previewingGap = guideGapPreview != null && guideGapPreview >= 1 && (guideSelection?.length ?? 0) > 0;
+  const displayGuides = previewingGap
+    ? spaceGuidesByGap(guides, guideSelection ?? [], guideGapPreview!)
+    : guides;
+  const pairs = guidePairs(displayGuides);
 
   const bleedChips = (
     <div className="flex flex-wrap gap-1" data-testid="bleed-edge-chips">
@@ -216,6 +224,38 @@ export function InspectorPrint() {
           >
             Even
           </button>
+          <div className="col-span-2 flex items-center gap-1">
+            <NumField
+              value={gapValue}
+              onCommit={(n) => {
+                const next = Math.max(1, Math.round(n * 10) / 10);
+                setGapValue(next);
+                useDesign.getState().setGuideGapPreview?.(null);
+              }}
+              onDraft={(n) => {
+                useDesign.getState().setGuideGapPreview?.(n != null && n >= 1 ? n : null);
+              }}
+              min={1}
+              className="h-7 w-14 rounded-[8px] border border-border bg-transparent px-1 font-mono text-[10px] text-ink"
+              aria-label="guide equal gap"
+            />
+            <button
+              type="button"
+              disabled={!canSpaceGuidesByGap(guides, guideSelection ?? [])}
+              className={cn(
+                "h-7 flex-1 rounded-[8px] border border-border text-[10px] text-ink-dim hover:border-phosphor hover:text-ink",
+                !canSpaceGuidesByGap(guides, guideSelection ?? []) && "opacity-40",
+              )}
+              title="Space selected guides of the same axis by the entered gap, anchoring the first"
+              onClick={() => {
+                spaceSelectedGuidesByGap?.(gapValue);
+                useDesign.getState().setGuideGapPreview?.(null);
+                setStudioStatus(`Guides spaced by ${gapValue}`);
+              }}
+            >
+              Gap
+            </button>
+          </div>
           <button
             type="button"
             disabled={!(guideSelection ?? []).length}
@@ -361,9 +401,10 @@ export function InspectorPrint() {
         {probe ? (
           <p className="mb-1 font-mono text-[10px] text-phosphor">{formatGuideProbe(probe)}</p>
         ) : null}
-        {guidePairs(guides).length ? (
-          <p className="mb-1 font-mono text-[10px] text-ink-dim">
-            {guidePairs(guides).map(formatGuidePair).join("  ·  ")}
+        {pairs.length ? (
+          <p className={cn("mb-1 font-mono text-[10px]", previewingGap ? "text-phosphor" : "text-ink-dim")}>
+            {previewingGap ? "preview  " : ""}
+            {pairs.map(formatGuidePair).join("  ·  ")}
           </p>
         ) : null}
         {guides.length === 0 ? (
