@@ -76,6 +76,7 @@ export function InspectorPrint() {
   const guideGapPreview = useDesign((s) => s.guideGapPreview) as number | null | undefined;
   const guideDistributePreview = useDesign((s) => s.guideDistributePreview) as boolean | undefined;
   const guideLookPreview = useDesign((s) => s.guideLookPreview) as { color: string; dash: string } | null | undefined;
+  const guideLooks = useDesign((s) => s.guideLooks) as import("@/lib/design/guide-style").GuideLooks | undefined;
 
   if (!doc) return null;
   const edges = resolveBleed(doc);
@@ -394,15 +395,15 @@ export function InspectorPrint() {
             const relevant = (guideSelection?.length ? guideSelection : guides.map((g) => g.id))
               .map((id) => guides.find((g) => g.id === id))
               .filter((g): g is NonNullable<typeof g> => !!g);
-            const active =
-              relevant.length > 0 &&
-              relevant.every((g) => {
-                const resolved = resolveGuideStroke(g);
-                return (
-                  resolved.color.toLowerCase() === preset.color.toLowerCase() &&
-                  resolved.dash === preset.dash
-                );
-              });
+            const matches = relevant.filter((g) => {
+              const resolved = resolveGuideStroke(g, guideLooks);
+              return (
+                resolved.color.toLowerCase() === preset.color.toLowerCase() &&
+                resolved.dash === preset.dash
+              );
+            }).length;
+            const fullActive = relevant.length > 0 && matches === relevant.length;
+            const partial = matches > 0 && matches < relevant.length;
             return (
               <button
                 key={preset.id}
@@ -410,15 +411,20 @@ export function InspectorPrint() {
                 disabled={!guides.length}
                 className={cn(
                   "h-6 rounded-[4px] border px-1.5 font-mono text-[8px] text-ink hover:border-phosphor",
-                  active && "ring-2 ring-phosphor/90 ring-offset-1 ring-offset-surface",
+                  fullActive && "ring-2 ring-phosphor/90 ring-offset-1 ring-offset-surface",
+                  partial && "ring-2 ring-phosphor/50 ring-offset-1 ring-offset-surface [ring-style:dashed]",
                   !guides.length && "opacity-40",
                 )}
                 style={{
-                  background: `${preset.color}${active ? "44" : "22"}`,
-                  borderColor: active ? "#c4ff4d" : preset.color,
+                  background: `${preset.color}${fullActive ? "44" : partial ? "33" : "22"}`,
+                  borderColor: fullActive ? "#c4ff4d" : partial ? "#c4ff4d88" : preset.color,
                 }}
-                title={`Apply ${preset.label} (color + dash) to selected guides (or all if none selected). Hover for live preview.`}
-                aria-pressed={active}
+                title={
+                  partial
+                    ? `${matches} of ${relevant.length} selected guides match ${preset.label}. Click to unify all.`
+                    : `Apply ${preset.label} (color + dash) to selected guides (or all if none selected). Hover for live preview.`
+                }
+                aria-pressed={fullActive ? true : partial ? "mixed" : false}
                 onMouseEnter={() => useDesign.getState().setGuideLookPreview?.({ color: preset.color, dash: preset.dash })}
                 onFocus={() => useDesign.getState().setGuideLookPreview?.({ color: preset.color, dash: preset.dash })}
                 onMouseLeave={() => useDesign.getState().setGuideLookPreview?.(null)}
@@ -427,7 +433,11 @@ export function InspectorPrint() {
                   useDesign.getState().setGuideLookPreview?.(null);
                   setSelectedGuidesColor?.(preset.color);
                   setSelectedGuidesDash?.(preset.dash);
-                  setStudioStatus(`Guide preset: ${preset.label}`);
+                  setStudioStatus(
+                    partial
+                      ? `Unified ${relevant.length} guides to ${preset.label}`
+                      : `Guide preset: ${preset.label}`,
+                  );
                 }}
               >
                 {preset.label}
