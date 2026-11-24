@@ -18,7 +18,7 @@ import { applyCropHandle, drawCropHandles, hitCropHandle, sourceBoxFor, type Cro
 import { isBitmap } from "@/lib/design/types";
 import { nodeCenter, degToRad, rotatePoint } from "@/lib/design/geometry";
 import { makeShape, makeText } from "@/lib/design/store";
-import { setStudioStatus } from "@/lib/design/studio-status";
+import { setStudioStatus, holdStudioStatus } from "@/lib/design/studio-status";
 import {
   alignSelectedPathPoints,
   appendPenPoint,
@@ -197,6 +197,7 @@ export default function CanvasStage() {
   const [marquee, setMarquee] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
   const [knifeStroke, setKnifeStroke] = useState<{ ax: number; ay: number; bx: number; by: number } | null>(null);
   const [knifeHover, setKnifeHover] = useState<{ x: number; y: number } | null>(null);
+  const [eyedropperPreview, setEyedropperPreview] = useState<{ sx: number; sy: number; hex: string | null; alpha: number } | null>(null);
   const [knifeResidual, setKnifeResidual] = useState<KnifeResidual | null>(null);
   const [flushPulse, setFlushPulse] = useState(0);
   const [flushPulseLag, setFlushPulseLag] = useState(0);
@@ -1280,6 +1281,8 @@ export default function CanvasStage() {
       }
       const hex = `#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
       rememberColor(hex);
+      const alphaPct = Math.round((a / 255) * 100);
+      const alphaNote = alphaPct < 100 ? ` · ${alphaPct}%` : "";
       const state = useDesign.getState();
       const sel = state.selection;
       if (sel.length) {
@@ -1287,13 +1290,13 @@ export default function CanvasStage() {
           const first = state.doc?.nodes.find((n) => n.id === sel[0]);
           const sw = Math.max(first?.strokeWidth ?? 1, 1);
           state.updateNodes(sel, { stroke: hex, strokeWidth: sw }, true);
-          setStudioStatus(`Eyedropper → stroke ${hex}`);
+          holdStudioStatus(`Eyedropper → stroke ${hex}${alphaNote}`);
         } else {
           state.updateNodes(sel, { fill: hex }, true);
-          setStudioStatus(`Eyedropper → fill ${hex}`);
+          holdStudioStatus(`Eyedropper → fill ${hex}${alphaNote}`);
         }
       } else {
-        setStudioStatus(`Eyedropper sampled ${hex}`);
+        holdStudioStatus(`Eyedropper sampled ${hex}${alphaNote}`);
       }
       state.setTool("select");
       return;
@@ -1696,6 +1699,32 @@ export default function CanvasStage() {
     const sx = e.clientX - rect.left;
     const sy = e.clientY - rect.top;
     const docPt = screenToDoc(sx, sy, viewport);
+
+    // Eyedropper live preview chip under cursor
+    if (tool === "eyedropper") {
+      const canvas = canvasRef.current;
+      const ctx = canvas?.getContext("2d");
+      let hex: string | null = null;
+      let alpha = 0;
+      if (canvas && ctx) {
+        const dpr = window.devicePixelRatio || 1;
+        const px = Math.floor(sx * dpr);
+        const py = Math.floor(sy * dpr);
+        if (px >= 0 && py >= 0 && px < canvas.width && py < canvas.height) {
+          const pixel = ctx.getImageData(px, py, 1, 1).data;
+          alpha = pixel[3] ?? 0;
+          if (alpha >= 16) {
+            const r = pixel[0] ?? 0;
+            const g = pixel[1] ?? 0;
+            const b = pixel[2] ?? 0;
+            hex = `#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+          }
+        }
+      }
+      setEyedropperPreview({ sx, sy, hex, alpha });
+    } else if (eyedropperPreview) {
+      setEyedropperPreview(null);
+    }
 
     // Knife hover preview (point cut) when not dragging
     if (tool === "knife" && !drag.current) {
@@ -2400,6 +2429,31 @@ export default function CanvasStage() {
         onPointerCancel={onPointerUp}
         onWheel={onWheel}
       />
+      {eyedropperPreview && (
+        <div
+          className="pointer-events-none absolute z-50 flex items-center gap-1.5 rounded border border-phosphor/70 bg-ground/95 px-1.5 py-1 text-[11px] text-ink shadow-lg"
+          style={{
+            left: Math.min(Math.max(eyedropperPreview.sx + 18, 8), (wrapRef.current?.clientWidth ?? 800) - 120),
+            top: Math.min(Math.max(eyedropperPreview.sy + 18, 8), (wrapRef.current?.clientHeight ?? 600) - 36),
+          }}
+        >
+          <div
+            className="size-5 rounded border border-phosphor/40"
+            style={{
+              background: eyedropperPreview.hex
+                ? eyedropperPreview.hex
+                : "repeating-conic-gradient(#808080 0% 25%, #c0c0c0 0% 50%) 50% / 8px 8px",
+              opacity: eyedropperPreview.hex ? eyedropperPreview.alpha / 255 : 1,
+            }}
+          />
+          <span className="font-mono tracking-tight">
+            {eyedropperPreview.hex ?? "transparent"}
+            {eyedropperPreview.hex && eyedropperPreview.alpha < 255
+              ? ` ${Math.round((eyedropperPreview.alpha / 255) * 100)}%`
+              : ""}
+          </span>
+        </div>
+      )}
     </div>
   );
 }
