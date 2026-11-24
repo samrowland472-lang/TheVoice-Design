@@ -47,9 +47,14 @@ export interface GradientFill {
   type: "linear" | "radial";
   angle: number;
   stops: { offset: number; color: string }[];
-  /** Relative centre for radial gradients (0–1, default 0.5) */
+  /** Relative centre (outer) for radial gradients (0–1, default 0.5) */
   cx?: number;
   cy?: number;
+  /** Relative focal point (inner) for radial gradients (0–1, defaults to centre) */
+  fx?: number;
+  fy?: number;
+  /** Relative inner radius for radial gradients (0–1 fraction of outer radius, default 0) */
+  r0?: number;
 }
 
 export type Fill = string | GradientFill;

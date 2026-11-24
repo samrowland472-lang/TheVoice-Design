@@ -46,7 +46,15 @@ export function applyFill(ctx: CanvasRenderingContext2D, fill: Fill, x: number, 
         r = Math.max(r, Math.hypot(px - cx, py - cy));
       }
       r = Math.max(r, 1);
-      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      const fx = fill.fx ?? ox;
+      const fy = fill.fy ?? oy;
+      const fxPos = x + w * fx;
+      const fyPos = y + h * fy;
+      // Inner radius as fraction of outer (clamped)
+      const r0Frac = Math.max(0, Math.min(0.95, fill.r0 ?? 0));
+      const innerR = r0Frac * r;
+      // Inner (focal) circle at focal point; outer at centre covering bounds
+      const g = ctx.createRadialGradient(fxPos, fyPos, innerR, cx, cy, r);
       for (const s of fill.stops) g.addColorStop(Math.max(0, Math.min(1, s.offset)), s.color);
       ctx.fillStyle = g;
     } else {
