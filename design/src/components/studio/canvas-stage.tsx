@@ -390,7 +390,7 @@ export default function CanvasStage() {
     drawStrokeDashScrubChips(ctx, doc.nodes, strokeDashScrubId, selection, viewport, dpr);
     drawStrokeDashOffsetScrubChips(ctx, doc.nodes, strokeDashOffsetScrubId, selection, viewport, dpr);
     drawMiterLimitScrubChips(ctx, doc.nodes, miterLimitScrubId, selection, viewport, dpr);
-    drawGradientAngleScrubChips(ctx, doc.nodes, gradientAngleScrubId, selection, viewport, dpr);
+    drawGradientAngleScrubChips(ctx, doc.nodes, gradientAngleScrubId, selection, viewport, dpr, gradientHoverKey);
     drawRadialR0ScrubChips(ctx, doc.nodes, radialR0ScrubId, selection, viewport, dpr);
     drawRadialCentreScrubChips(ctx, doc.nodes, radialCentreScrubId, selection, viewport, dpr);
     drawRadialFocalScrubChips(ctx, doc.nodes, radialFocalScrubId, selection, viewport, dpr);
@@ -405,10 +405,10 @@ export default function CanvasStage() {
     }
     if (gradientHoverKey === "angle" || gradientHoverKey === "length" || gradientHoverKey === "offset") {
       const hoverId = selection[0] ?? null;
-      drawGradientAngleScrubChips(ctx, doc.nodes, hoverId, selection, viewport, dpr);
+      drawGradientAngleScrubChips(ctx, doc.nodes, hoverId, selection, viewport, dpr, gradientHoverKey);
     }
     drawGradientAngleHandle(ctx, doc.nodes, selection, viewport, dpr, gradientHoverKey);
-    drawGradientRadialHandle(ctx, doc.nodes, selection, viewport, dpr);
+    drawGradientRadialHandle(ctx, doc.nodes, selection, viewport, dpr, gradientHoverKey);
     if (strokeGhost) {
       ctx.save();
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -867,7 +867,7 @@ export default function CanvasStage() {
     drawStrokeDashScrubChips(ctx, doc.nodes, strokeDashScrubId, selection, viewport, dpr);
     drawStrokeDashOffsetScrubChips(ctx, doc.nodes, strokeDashOffsetScrubId, selection, viewport, dpr);
     drawMiterLimitScrubChips(ctx, doc.nodes, miterLimitScrubId, selection, viewport, dpr);
-    drawGradientAngleScrubChips(ctx, doc.nodes, gradientAngleScrubId, selection, viewport, dpr);
+    drawGradientAngleScrubChips(ctx, doc.nodes, gradientAngleScrubId, selection, viewport, dpr, gradientHoverKey);
     drawRadialR0ScrubChips(ctx, doc.nodes, radialR0ScrubId, selection, viewport, dpr);
     drawRadialCentreScrubChips(ctx, doc.nodes, radialCentreScrubId, selection, viewport, dpr);
     drawRadialFocalScrubChips(ctx, doc.nodes, radialFocalScrubId, selection, viewport, dpr);
@@ -882,10 +882,10 @@ export default function CanvasStage() {
     }
     if (gradientHoverKey === "angle" || gradientHoverKey === "length" || gradientHoverKey === "offset") {
       const hoverId = selection[0] ?? null;
-      drawGradientAngleScrubChips(ctx, doc.nodes, hoverId, selection, viewport, dpr);
+      drawGradientAngleScrubChips(ctx, doc.nodes, hoverId, selection, viewport, dpr, gradientHoverKey);
     }
     drawGradientAngleHandle(ctx, doc.nodes, selection, viewport, dpr, gradientHoverKey);
-    drawGradientRadialHandle(ctx, doc.nodes, selection, viewport, dpr);
+    drawGradientRadialHandle(ctx, doc.nodes, selection, viewport, dpr, gradientHoverKey);
     if (strokeGhost) {
       ctx.save();
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1669,6 +1669,7 @@ export default function CanvasStage() {
                 if (dx * dx + dy * dy < hitR * hitR) {
                   drag.current = { type: "gradient-angle", id: n.id, cx: handle.cx, cy: handle.cy };
                   useDesign.getState().setGradientAngleScrubId(n.id);
+                  useDesign.getState().setGradientHoverKey("length");
                   setStudioStatus(`Gradient angle ${Math.round(n.fill.angle)}°`);
                   return;
                 }
@@ -1679,6 +1680,7 @@ export default function CanvasStage() {
                 if (cdx * cdx + cdy * cdy < cHitR * cHitR) {
                   drag.current = { type: "gradient-linear-offset", id: n.id };
                   useDesign.getState().setGradientAngleScrubId(n.id); // reuse for chip
+                  useDesign.getState().setGradientHoverKey("offset");
                   setStudioStatus(`Gradient offset`);
                   return;
                 }
@@ -1707,6 +1709,7 @@ export default function CanvasStage() {
                 if (dx * dx + dy * dy < hitR * hitR) {
                   drag.current = { type: "gradient-radial-r0", id: n.id };
                   useDesign.getState().setRadialR0ScrubId(n.id);
+                  useDesign.getState().setGradientHoverKey("r0");
                   setStudioStatus(`Radial inner radius ${(r0h.r0 * 100).toFixed(0)}%`);
                   return;
                 }
@@ -1719,6 +1722,7 @@ export default function CanvasStage() {
                 if (dx * dx + dy * dy < hitR * hitR) {
                   drag.current = { type: "gradient-radial-focal", id: n.id };
                   useDesign.getState().setRadialFocalScrubId(n.id);
+                  useDesign.getState().setGradientHoverKey("focal");
                   const fx = n.fill.fx ?? n.fill.cx ?? 0.5;
                   const fy = n.fill.fy ?? n.fill.cy ?? 0.5;
                   setStudioStatus(`Radial focal ${(fx * 100).toFixed(0)}%, ${(fy * 100).toFixed(0)}%`);
@@ -1733,6 +1737,7 @@ export default function CanvasStage() {
                 if (dx * dx + dy * dy < hitR * hitR) {
                   drag.current = { type: "gradient-radial", id: n.id };
                   useDesign.getState().setRadialCentreScrubId(n.id);
+                  useDesign.getState().setGradientHoverKey("centre");
                   setStudioStatus(
                     `Radial centre ${((n.fill.cx ?? 0.5) * 100).toFixed(0)}%, ${((n.fill.cy ?? 0.5) * 100).toFixed(0)}%`,
                   );
@@ -2539,11 +2544,13 @@ export default function CanvasStage() {
     if (d?.type === "gradient-angle") {
       commit();
       useDesign.getState().setGradientAngleScrubId(null);
+      useDesign.getState().setGradientHoverKey(null);
       setStudioStatus("Gradient angle committed");
     }
     if (d?.type === "gradient-linear-offset") {
       commit();
       useDesign.getState().setGradientAngleScrubId(null);
+      useDesign.getState().setGradientHoverKey(null);
       setStudioStatus("Gradient offset committed");
     }
     if (d?.type === "gradient-radial") {
@@ -3061,38 +3068,49 @@ function drawPhosphorValueChip(
   cx: number,
   cy: number,
   zoom: number,
+  emphasize = false,
 ) {
-  ctx.font = `${Math.max(9, 11 / zoom)}px "IBM Plex Mono", ui-monospace, monospace`;
+  const fontPx = emphasize ? Math.max(10, 13.5 / zoom) : Math.max(9, 11 / zoom);
+  ctx.font = `${fontPx}px "IBM Plex Mono", ui-monospace, monospace`;
   ctx.textAlign = "left";
   ctx.textBaseline = "bottom";
   const tw = ctx.measureText(label).width;
-  const chipW = tw + 8 / zoom;
-  const chipH = 14 / zoom;
+  const padX = (emphasize ? 10 : 8) / zoom;
+  const chipW = tw + padX;
+  const chipH = (emphasize ? 16.5 : 14) / zoom;
 
-  // soft outer glow — dual phosphor rings matching tip ghosts
+  // soft outer glow — dual phosphor rings matching tip ghosts (stronger when emphasized)
+  const g1 = emphasize ? 0.42 : 0.28;
+  const g2 = emphasize ? 0.18 : 0.12;
+  const lw1 = (emphasize ? 3.8 : 3.2) / zoom;
+  const lw2 = (emphasize ? 6.4 : 5.5) / zoom;
   ctx.save();
-  ctx.globalAlpha = 0.28;
+  ctx.globalAlpha = g1;
   ctx.strokeStyle = "rgba(63, 198, 255, 0.85)";
-  ctx.lineWidth = 3.2 / zoom;
+  ctx.lineWidth = lw1;
   ctx.beginPath();
   ctx.roundRect(cx - 1.6 / zoom, cy - chipH - 1.6 / zoom, chipW + 3.2 / zoom, chipH + 3.2 / zoom, 4.2 / zoom);
   ctx.stroke();
-  ctx.globalAlpha = 0.12;
-  ctx.lineWidth = 5.5 / zoom;
+  ctx.globalAlpha = g2;
+  ctx.lineWidth = lw2;
   ctx.beginPath();
   ctx.roundRect(cx - 3.2 / zoom, cy - chipH - 3.2 / zoom, chipW + 6.4 / zoom, chipH + 6.4 / zoom, 5.5 / zoom);
   ctx.stroke();
   ctx.restore();
 
-  ctx.fillStyle = "rgba(6, 23, 15, 0.82)";
-  ctx.strokeStyle = "rgba(63, 198, 255, 0.7)";
-  ctx.lineWidth = 1 / zoom;
+  const bgAlpha = emphasize ? 0.92 : 0.82;
+  const strokeAlpha = emphasize ? 0.95 : 0.7;
+  const textAlpha = emphasize ? 1 : 0.95;
+  ctx.fillStyle = `rgba(6, 23, 15, ${bgAlpha})`;
+  ctx.strokeStyle = `rgba(63, 198, 255, ${strokeAlpha})`;
+  ctx.lineWidth = (emphasize ? 1.4 : 1) / zoom;
   ctx.beginPath();
-  ctx.roundRect(cx, cy - chipH, chipW, chipH, 3 / zoom);
+  ctx.roundRect(cx, cy - chipH, chipW, chipH, (emphasize ? 3.5 : 3) / zoom);
   ctx.fill();
   ctx.stroke();
-  ctx.fillStyle = "rgba(63, 198, 255, 0.95)";
-  ctx.fillText(label, cx + 4 / zoom, cy - 2 / zoom);
+  ctx.fillStyle = `rgba(63, 198, 255, ${textAlpha})`;
+  const textPad = (emphasize ? 5 : 4) / zoom;
+  ctx.fillText(label, cx + textPad, cy - 2 / zoom);
 }
 
 /** Dual phosphor outer glow + main stroke for measurement guide lines (align, distribute, etc.). */
@@ -3928,33 +3946,43 @@ function drawGradientAngleHandle(
   for (const n of linears) {
     const h = gradientAngleHandle(n, zoom);
     if (!h) continue;
+    const activeLenOrAng = hoverKey === "length" || hoverKey === "angle";
     ctx.beginPath();
     ctx.moveTo(h.cx, h.cy);
     ctx.lineTo(h.ex, h.ey);
+    if (activeLenOrAng) {
+      ctx.strokeStyle = "rgba(126, 224, 255, 0.95)";
+      ctx.lineWidth = 2.2 / zoom;
+    } else {
+      ctx.strokeStyle = "rgba(63, 198, 255, 0.7)";
+      ctx.lineWidth = 1.5 / zoom;
+    }
     ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle = "#3fc6ff";
+    ctx.fillStyle = activeLenOrAng ? "#7ee0ff" : "#3fc6ff";
     ctx.strokeStyle = "#7ee0ff";
     ctx.lineWidth = 1.2 / zoom;
     const r = 5 / zoom;
-    const endR = hoverKey === "length" ? r * 1.6 : r;
+    const endR = activeLenOrAng ? r * 1.85 : r;
     ctx.beginPath();
     ctx.arc(h.ex, h.ey, endR, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
-    if (hoverKey === "length") {
+    if (activeLenOrAng) {
+      // soft outer glow ring
       ctx.beginPath();
-      ctx.arc(h.ex, h.ey, endR + 3 / zoom, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(63, 198, 255, 0.5)";
-      ctx.lineWidth = 2 / zoom;
+      ctx.arc(h.ex, h.ey, endR + 4.5 / zoom, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(63, 198, 255, 0.45)";
+      ctx.lineWidth = 2.5 / zoom;
       ctx.stroke();
     }
     // Offset centre handle (phosphor diamond)
     ctx.setLineDash([]);
-    ctx.fillStyle = hoverKey === "offset" ? "#7ee0ff" : "#3fc6ff";
+    const activeOff = hoverKey === "offset";
+    ctx.fillStyle = activeOff ? "#a8f0ff" : "#3fc6ff";
     ctx.strokeStyle = "#7ee0ff";
-    ctx.lineWidth = hoverKey === "offset" ? 2 / zoom : 1.2 / zoom;
-    const s = hoverKey === "offset" ? 6 / zoom : 4 / zoom;
+    ctx.lineWidth = activeOff ? 2.4 / zoom : 1.2 / zoom;
+    const s = activeOff ? 7.2 / zoom : 4 / zoom;
     ctx.beginPath();
     ctx.moveTo(h.cx, h.cy - s);
     ctx.lineTo(h.cx + s, h.cy);
@@ -3963,6 +3991,19 @@ function drawGradientAngleHandle(
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
+    if (activeOff) {
+      // soft outer glow for diamond
+      const gs = s + 3.5 / zoom;
+      ctx.beginPath();
+      ctx.moveTo(h.cx, h.cy - gs);
+      ctx.lineTo(h.cx + gs, h.cy);
+      ctx.lineTo(h.cx, h.cy + gs);
+      ctx.lineTo(h.cx - gs, h.cy);
+      ctx.closePath();
+      ctx.strokeStyle = "rgba(63, 198, 255, 0.4)";
+      ctx.lineWidth = 2 / zoom;
+      ctx.stroke();
+    }
     ctx.setLineDash([4 / zoom, 3 / zoom]);
   }
   ctx.restore();
@@ -4048,6 +4089,7 @@ function drawGradientRadialHandle(
   selection: string[],
   vp: Viewport,
   dpr: number,
+  hoverKey: "angle" | "length" | "offset" | "centre" | "focal" | "r0" | null = null,
 ) {
   const selected = nodes.filter((x) => selection.includes(x.id) && x.visible);
   if (!selected.length) return;
@@ -4069,9 +4111,10 @@ function drawGradientRadialHandle(
     if (!centre) continue;
     const focal = radialFocal(n);
     // Centre cross (outer)
-    const r = 6 / zoom;
-    ctx.strokeStyle = "rgba(63, 198, 255, 0.85)";
-    ctx.lineWidth = 1.4 / zoom;
+    const activeCentre = hoverKey === "centre";
+    const r = activeCentre ? 9.5 / zoom : 6 / zoom;
+    ctx.strokeStyle = activeCentre ? "rgba(126, 224, 255, 0.95)" : "rgba(63, 198, 255, 0.85)";
+    ctx.lineWidth = activeCentre ? 2.2 / zoom : 1.4 / zoom;
     ctx.beginPath();
     ctx.arc(centre.x, centre.y, r, 0, Math.PI * 2);
     ctx.stroke();
@@ -4081,16 +4124,24 @@ function drawGradientRadialHandle(
     ctx.moveTo(centre.x, centre.y - r * 1.6);
     ctx.lineTo(centre.x, centre.y + r * 1.6);
     ctx.stroke();
-    ctx.fillStyle = "#3fc6ff";
+    ctx.fillStyle = activeCentre ? "#a8f0ff" : "#3fc6ff";
     ctx.beginPath();
-    ctx.arc(centre.x, centre.y, 2.2 / zoom, 0, Math.PI * 2);
+    ctx.arc(centre.x, centre.y, activeCentre ? 3.4 / zoom : 2.2 / zoom, 0, Math.PI * 2);
     ctx.fill();
+    if (activeCentre) {
+      ctx.beginPath();
+      ctx.arc(centre.x, centre.y, r + 5 / zoom, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(63, 198, 255, 0.45)";
+      ctx.lineWidth = 2.8 / zoom;
+      ctx.stroke();
+    }
     // Focal point (inner) — smaller filled diamond
     if (focal) {
-      const fr = 4.5 / zoom;
-      ctx.strokeStyle = "rgba(126, 224, 255, 0.9)";
-      ctx.fillStyle = "#7ee0ff";
-      ctx.lineWidth = 1.2 / zoom;
+      const activeFocal = hoverKey === "focal";
+      const fr = activeFocal ? 7.2 / zoom : 4.5 / zoom;
+      ctx.strokeStyle = activeFocal ? "rgba(168, 240, 255, 0.95)" : "rgba(126, 224, 255, 0.9)";
+      ctx.fillStyle = activeFocal ? "#a8f0ff" : "#7ee0ff";
+      ctx.lineWidth = activeFocal ? 2.2 / zoom : 1.2 / zoom;
       ctx.beginPath();
       ctx.moveTo(focal.x, focal.y - fr);
       ctx.lineTo(focal.x + fr, focal.y);
@@ -4099,6 +4150,13 @@ function drawGradientRadialHandle(
       ctx.closePath();
       ctx.fill();
       ctx.stroke();
+      if (activeFocal) {
+        ctx.beginPath();
+        ctx.arc(focal.x, focal.y, fr + 4.5 / zoom, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(63, 198, 255, 0.4)";
+        ctx.lineWidth = 2.4 / zoom;
+        ctx.stroke();
+      }
     }
     // Inner radius (r0) — dashed circle + phosphor handle to the right of focal
     const r0h = radialR0Handle(n, zoom);
@@ -4113,14 +4171,22 @@ function drawGradientRadialHandle(
       ctx.restore();
     }
     if (r0h) {
-      const hr = 5 / zoom;
-      ctx.strokeStyle = "rgba(63, 198, 255, 0.95)";
-      ctx.fillStyle = "#3fc6ff";
-      ctx.lineWidth = 1.4 / zoom;
+      const activeR0 = hoverKey === "r0";
+      const hr = activeR0 ? 8.5 / zoom : 5 / zoom;
+      ctx.strokeStyle = activeR0 ? "rgba(126, 224, 255, 0.95)" : "rgba(63, 198, 255, 0.95)";
+      ctx.fillStyle = activeR0 ? "#7ee0ff" : "#3fc6ff";
+      ctx.lineWidth = activeR0 ? 2.2 / zoom : 1.4 / zoom;
       ctx.beginPath();
       ctx.arc(r0h.x, r0h.y, hr, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
+      if (activeR0) {
+        ctx.beginPath();
+        ctx.arc(r0h.x, r0h.y, hr + 4.5 / zoom, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(63, 198, 255, 0.45)";
+        ctx.lineWidth = 2.5 / zoom;
+        ctx.stroke();
+      }
       // small tick inward toward focal along the direction
       const len = Math.hypot(r0h.dx, r0h.dy) || 1;
       const ux = r0h.dx / len;
@@ -4141,6 +4207,7 @@ function drawGradientAngleScrubChips(
   selection: string[],
   vp: Viewport,
   dpr: number,
+  focusKey: "angle" | "length" | "offset" | null = null,
 ) {
   if (!scrubId) return;
   const multi = selection.length > 1 && selection.includes(scrubId);
@@ -4172,10 +4239,18 @@ function drawGradientAngleScrubChips(
     const loy = Math.round((fill.loy ?? 0.5) * 100);
     const hnd = gradientAngleHandle(n, zoom);
     if (hnd) {
-      // Denser separate chips attached to handles (cursor-following while dragging)
-      drawPhosphorValueChip(ctx, `∠${angle}°`, hnd.cx + 8 / zoom, hnd.cy - 6 / zoom, zoom);
-      drawPhosphorValueChip(ctx, `${llen}%`, hnd.ex + 8 / zoom, hnd.ey - 6 / zoom, zoom);
-      drawPhosphorValueChip(ctx, `${lox},${loy}`, hnd.cx - 28 / zoom, hnd.cy + 18 / zoom, zoom);
+      // Denser separate chips attached to handles. Focused dimension last (on top), slightly larger/brighter.
+      const chips = [
+        { key: "angle" as const, label: `∠${angle}°`, x: hnd.cx + 8 / zoom, y: hnd.cy - 6 / zoom },
+        { key: "length" as const, label: `${llen}%`, x: hnd.ex + 8 / zoom, y: hnd.ey - 6 / zoom },
+        { key: "offset" as const, label: `${lox},${loy}`, x: hnd.cx - 28 / zoom, y: hnd.cy + 18 / zoom },
+      ];
+      const ordered = focusKey
+        ? [...chips.filter((c) => c.key !== focusKey), ...chips.filter((c) => c.key === focusKey)]
+        : chips;
+      for (const c of ordered) {
+        drawPhosphorValueChip(ctx, c.label, c.x, c.y, zoom, c.key === focusKey);
+      }
     } else {
       const label = `∠${angle}° · ${llen}% · ${lox},${loy}`;
       ctx.font = `${Math.max(9, 11 / zoom)}px "IBM Plex Mono", ui-monospace, monospace`;
