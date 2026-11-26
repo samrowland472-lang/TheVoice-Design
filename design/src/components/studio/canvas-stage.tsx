@@ -432,7 +432,7 @@ export default function CanvasStage() {
     }
     const focusedStop = drag.current?.type === "gradient-stop" ? { id: drag.current.id, index: drag.current.stopIndex } : null;
     drawGradientAngleHandle(ctx, doc.nodes, selection, viewport, dpr, gradientHoverKey, focusedStop, gradientHoverStop);
-    drawGradientRadialHandle(ctx, doc.nodes, selection, viewport, dpr, gradientHoverKey);
+    drawGradientRadialHandle(ctx, doc.nodes, selection, viewport, dpr, gradientHoverKey, focusedStop, gradientHoverStop);
     if (strokeGhost) {
       ctx.save();
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -916,7 +916,7 @@ export default function CanvasStage() {
     }
     const focusedStop = drag.current?.type === "gradient-stop" ? { id: drag.current.id, index: drag.current.stopIndex } : null;
     drawGradientAngleHandle(ctx, doc.nodes, selection, viewport, dpr, gradientHoverKey, focusedStop, gradientHoverStop);
-    drawGradientRadialHandle(ctx, doc.nodes, selection, viewport, dpr, gradientHoverKey);
+    drawGradientRadialHandle(ctx, doc.nodes, selection, viewport, dpr, gradientHoverKey, focusedStop, gradientHoverStop);
     if (strokeGhost) {
       ctx.save();
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1302,60 +1302,120 @@ export default function CanvasStage() {
     const docPt = { x: (sx - viewport.x) / viewport.zoom, y: (sy - viewport.y) / viewport.zoom };
     const selected = doc.nodes.filter((n) => selection.includes(n.id) && n.visible);
     if (selected.length === 0) return;
+
+    // Linear gradient stops
     const linears = selected.filter((n) => typeof n.fill === "object" && n.fill != null && n.fill.type === "linear");
-    if (linears.length !== selected.length || linears.length === 0) return;
-    const fillStr = JSON.stringify(linears[0]!.fill);
-    if (!linears.every((n) => JSON.stringify(n.fill) === fillStr)) return;
-    // Prefer existing stop circles for color pick
-    for (const n of linears.slice().reverse()) {
-      const sw = linearStopWorld(n, viewport.zoom);
-      if (!sw) continue;
-      const hitR = 7 / viewport.zoom;
-      for (let i = 0; i < sw.stops.length; i++) {
-        const st = sw.stops[i]!;
-        const ddx = docPt.x - st.x;
-        const ddy = docPt.y - st.y;
-        if (ddx * ddx + ddy * ddy < hitR * hitR) {
-          setStopColorTarget({
-            id: n.id,
-            stopIndex: i,
-            color: st.color,
-            sx,
-            sy,
-          });
-          setStudioStatus(`Stop ${i + 1} colour`);
-          return;
+    if (linears.length === selected.length && linears.length > 0) {
+      const fillStr = JSON.stringify(linears[0]!.fill);
+      if (linears.every((n) => JSON.stringify(n.fill) === fillStr)) {
+        // Prefer existing stop circles for color pick
+        for (const n of linears.slice().reverse()) {
+          const sw = linearStopWorld(n, viewport.zoom);
+          if (!sw) continue;
+          const hitR = 7 / viewport.zoom;
+          for (let i = 0; i < sw.stops.length; i++) {
+            const st = sw.stops[i]!;
+            const ddx = docPt.x - st.x;
+            const ddy = docPt.y - st.y;
+            if (ddx * ddx + ddy * ddy < hitR * hitR) {
+              setStopColorTarget({
+                id: n.id,
+                stopIndex: i,
+                color: st.color,
+                sx,
+                sy,
+              });
+              setStudioStatus(`Stop ${i + 1} colour`);
+              return;
+            }
+          }
+        }
+        for (const n of linears.slice().reverse()) {
+          const sw = linearStopWorld(n, viewport.zoom);
+          if (!sw) continue;
+          const h = sw.h;
+          const dx = h.ex - h.cx;
+          const dy = h.ey - h.cy;
+          const len2 = dx * dx + dy * dy;
+          if (len2 < 1e-6) continue;
+          const px = docPt.x - h.cx;
+          const py = docPt.y - h.cy;
+          const t = Math.max(-1, Math.min(1, (px * dx + py * dy) / len2));
+          const projX = h.cx + t * dx;
+          const projY = h.cy + t * dy;
+          const dist = Math.hypot(docPt.x - projX, docPt.y - projY);
+          if (dist < 8 / viewport.zoom) {
+            let offset = 0.5 + t * 0.5;
+            offset = Math.max(0, Math.min(1, offset));
+            let nearest = (n.fill as any).stops[0];
+            let best = 1;
+            for (const s of (n.fill as any).stops) {
+              const d = Math.abs(s.offset - offset);
+              if (d < best) { best = d; nearest = s; }
+            }
+            const newStops = sortedStops([...(n.fill as any).stops, { offset, color: nearest.color }]);
+            const ids = selection.length > 1 ? selection : [n.id];
+            useDesign.getState().updateNodes(ids, { fill: { ...(n.fill as any), stops: newStops } }, true);
+            setStudioStatus(`Added stop at ${Math.round(offset * 100)}%`);
+            return;
+          }
         }
       }
     }
-    for (const n of linears.slice().reverse()) {
-      const sw = linearStopWorld(n, viewport.zoom);
-      if (!sw) continue;
-      const h = sw.h;
-      const dx = h.ex - h.cx;
-      const dy = h.ey - h.cy;
-      const len2 = dx * dx + dy * dy;
-      if (len2 < 1e-6) continue;
-      const px = docPt.x - h.cx;
-      const py = docPt.y - h.cy;
-      const t = Math.max(-1, Math.min(1, (px * dx + py * dy) / len2));
-      const projX = h.cx + t * dx;
-      const projY = h.cy + t * dy;
-      const dist = Math.hypot(docPt.x - projX, docPt.y - projY);
-      if (dist < 8 / viewport.zoom) {
-        let offset = 0.5 + t * 0.5;
-        offset = Math.max(0, Math.min(1, offset));
-        let nearest = (n.fill as any).stops[0];
-        let best = 1;
-        for (const s of (n.fill as any).stops) {
-          const d = Math.abs(s.offset - offset);
-          if (d < best) { best = d; nearest = s; }
+
+    // Radial gradient stops
+    const radials = selected.filter((n) => typeof n.fill === "object" && n.fill != null && n.fill.type === "radial");
+    if (radials.length === selected.length && radials.length > 0) {
+      const fillStr = JSON.stringify(radials[0]!.fill);
+      if (radials.every((n) => JSON.stringify(n.fill) === fillStr)) {
+        // Prefer existing stop circles for color pick
+        for (const n of radials.slice().reverse()) {
+          const sw = radialStopWorld(n, viewport.zoom);
+          if (!sw) continue;
+          const hitR = 7 / viewport.zoom;
+          for (let i = 0; i < sw.stops.length; i++) {
+            const st = sw.stops[i]!;
+            const ddx = docPt.x - st.x;
+            const ddy = docPt.y - st.y;
+            if (ddx * ddx + ddy * ddy < hitR * hitR) {
+              setStopColorTarget({
+                id: n.id,
+                stopIndex: i,
+                color: st.color,
+                sx,
+                sy,
+              });
+              setStudioStatus(`Stop ${i + 1} colour`);
+              return;
+            }
+          }
         }
-        const newStops = sortedStops([...(n.fill as any).stops, { offset, color: nearest.color }]);
-        const ids = selection.length > 1 ? selection : [n.id];
-        useDesign.getState().updateNodes(ids, { fill: { ...(n.fill as any), stops: newStops } }, true);
-        setStudioStatus(`Added stop at ${Math.round(offset * 100)}%`);
-        return;
+        // Double-click near the radial ray to add a stop
+        for (const n of radials.slice().reverse()) {
+          const sw = radialStopWorld(n, viewport.zoom);
+          if (!sw) continue;
+          const px = docPt.x - sw.focal.x;
+          const py = docPt.y - sw.focal.y;
+          const t = px * sw.ux + py * sw.uy;
+          const projX = sw.focal.x + sw.ux * t;
+          const projY = sw.focal.y + sw.uy * t;
+          const dist = Math.hypot(docPt.x - projX, docPt.y - projY);
+          const span = Math.max(1e-3, sw.outer - sw.innerR);
+          const offset = Math.max(0, Math.min(1, (t - sw.innerR) / span));
+          if (dist < 8 / viewport.zoom && t >= sw.innerR - 4 / viewport.zoom && t <= sw.outer + 4 / viewport.zoom) {
+            let nearest = (n.fill as any).stops[0];
+            let best = 1;
+            for (const s of (n.fill as any).stops) {
+              const d = Math.abs(s.offset - offset);
+              if (d < best) { best = d; nearest = s; }
+            }
+            const newStops = sortedStops([...(n.fill as any).stops, { offset, color: nearest.color }]);
+            const ids = selection.length > 1 ? selection : [n.id];
+            useDesign.getState().updateNodes(ids, { fill: { ...(n.fill as any), stops: newStops } }, true);
+            setStudioStatus(`Added stop at ${Math.round(offset * 100)}%`);
+            return;
+          }
+        }
       }
     }
   }
@@ -1829,6 +1889,31 @@ export default function CanvasStage() {
           const fillStr = JSON.stringify(radials[0]!.fill);
           const uniform = radials.every((n) => JSON.stringify(n.fill) === fillStr);
           if (uniform) {
+            // Prefer stop circles first (multi-stop on-canvas), then r0 / focal / centre
+            for (const n of radials.slice().reverse()) {
+              const sw = radialStopWorld(n, viewport.zoom);
+              if (sw) {
+                const stopHitR = 7 / viewport.zoom;
+                for (let i = 0; i < sw.stops.length; i++) {
+                  const st = sw.stops[i]!;
+                  const sdx = docPt.x - st.x;
+                  const sdy = docPt.y - st.y;
+                  if (sdx * sdx + sdy * sdy < stopHitR * stopHitR) {
+                    if (e.altKey && sw.stops.length > 2) {
+                      const newStops = (n.fill as any).stops.filter((_: any, j: number) => j !== i);
+                      const ids = selection.length > 1 ? selection : [n.id];
+                      useDesign.getState().updateNodes(ids, { fill: { ...(n.fill as any), stops: newStops } }, true);
+                      setStudioStatus(`Removed stop · ${newStops.length} left`);
+                      return;
+                    }
+                    drag.current = { type: "gradient-stop", id: n.id, stopIndex: i, origOffset: st.offset };
+                    useDesign.getState().setGradientAngleScrubId(n.id);
+                    setStudioStatus(`Stop ${Math.round(st.offset * 100)}%`);
+                    return;
+                  }
+                }
+              }
+            }
             // Prefer r0, then focal, then centre; check topmost first
             for (const n of radials.slice().reverse()) {
               const r0h = radialR0Handle(n, viewport.zoom);
@@ -1996,6 +2081,31 @@ export default function CanvasStage() {
               }
             }
             if (hitStop != null) break;
+          }
+        }
+      }
+      // also hover radial stops if no linear hit
+      if (hitStop == null) {
+        const radials = selected.filter((n) => typeof n.fill === "object" && n.fill != null && n.fill.type === "radial");
+        if (radials.length === selected.length && radials.length > 0) {
+          const fillStr = JSON.stringify(radials[0]!.fill);
+          if (radials.every((n) => JSON.stringify(n.fill) === fillStr)) {
+            for (const n of radials.slice().reverse()) {
+              const sw = radialStopWorld(n, viewport.zoom);
+              if (sw) {
+                const stopHitR = 8 / viewport.zoom;
+                for (let i = 0; i < sw.stops.length; i++) {
+                  const st = sw.stops[i]!;
+                  const sdx = docPt.x - st.x;
+                  const sdy = docPt.y - st.y;
+                  if (sdx * sdx + sdy * sdy < stopHitR * stopHitR) {
+                    hitStop = i;
+                    break;
+                  }
+                }
+              }
+              if (hitStop != null) break;
+            }
           }
         }
       }
@@ -2503,18 +2613,29 @@ export default function CanvasStage() {
     }
     if (d.type === "gradient-stop") {
       const n = doc.nodes.find((x) => x.id === d.id);
-      if (!n || typeof n.fill !== "object" || n.fill?.type !== "linear") return;
-      const sw = linearStopWorld(n, viewport.zoom);
-      if (!sw) return;
-      const h = sw.h;
-      const dx = h.ex - h.cx;
-      const dy = h.ey - h.cy;
-      const len2 = dx * dx + dy * dy;
-      if (len2 < 1e-6) return;
-      const px = docPt.x - h.cx;
-      const py = docPt.y - h.cy;
-      let tFromCenter = (px * dx + py * dy) / len2;
-      let offset = 0.5 + tFromCenter * 0.5;
+      if (!n || typeof n.fill !== "object" || !n.fill) return;
+      let offset = 0;
+      if (n.fill.type === "linear") {
+        const sw = linearStopWorld(n, viewport.zoom);
+        if (!sw) return;
+        const h = sw.h;
+        const dx = h.ex - h.cx;
+        const dy = h.ey - h.cy;
+        const len2 = dx * dx + dy * dy;
+        if (len2 < 1e-6) return;
+        const px = docPt.x - h.cx;
+        const py = docPt.y - h.cy;
+        let tFromCenter = (px * dx + py * dy) / len2;
+        offset = 0.5 + tFromCenter * 0.5;
+      } else if (n.fill.type === "radial") {
+        const sw = radialStopWorld(n, viewport.zoom);
+        if (!sw) return;
+        const px = docPt.x - sw.focal.x;
+        const py = docPt.y - sw.focal.y;
+        const t = px * sw.ux + py * sw.uy;
+        const span = Math.max(1e-3, sw.outer - sw.innerR);
+        offset = (t - sw.innerR) / span;
+      } else return;
       offset = Math.max(0, Math.min(1, offset));
       if (e.shiftKey) offset = Math.round(offset * 20) / 20;
       const rawStops = (n.fill as any).stops as { offset: number; color: string }[];
@@ -2767,7 +2888,7 @@ export default function CanvasStage() {
     if (d?.type === "gradient-stop") {
       // Ensure stops are sorted by offset on commit
       const n = doc.nodes.find((x) => x.id === d.id);
-      if (n && typeof n.fill === "object" && n.fill?.type === "linear") {
+      if (n && typeof n.fill === "object" && n.fill && (n.fill.type === "linear" || n.fill.type === "radial")) {
         const sorted = sortedStops((n.fill as any).stops);
         const ids = selection.length > 1 ? selection : [d.id];
         useDesign.getState().updateNodes(ids, { fill: { ...(n.fill as any), stops: sorted } }, false);
@@ -4190,6 +4311,29 @@ function sortedStops(stops: { offset: number; color: string }[]) {
   return [...stops].sort((a, b) => a.offset - b.offset);
 }
 
+/** World positions of radial gradient stops along the +x (rotated) ray from focal. */
+function radialStopWorld(n: DesignNode, zoom: number) {
+  if (typeof n.fill !== "object" || n.fill == null || n.fill.type !== "radial") return null;
+  const focal = radialFocal(n);
+  if (!focal) return null;
+  const outer = radialOuterRadius(n);
+  const r0 = Math.max(0, Math.min(0.95, n.fill.r0 ?? 0));
+  const innerR = r0 * outer;
+  const ang = degToRad(n.rotation || 0);
+  const ux = Math.cos(ang);
+  const uy = Math.sin(ang);
+  const stops = (n.fill.stops || []).map((s) => {
+    const r = innerR + Math.max(0, Math.min(1, s.offset)) * (outer - innerR);
+    return {
+      x: focal.x + ux * r,
+      y: focal.y + uy * r,
+      offset: s.offset,
+      color: s.color,
+    };
+  });
+  return { stops, focal, ux, uy, innerR, outer };
+}
+
 
 function drawGradientAngleHandle(
   ctx: CanvasRenderingContext2D,
@@ -4454,6 +4598,8 @@ function drawGradientRadialHandle(
   vp: Viewport,
   dpr: number,
   hoverKey: "angle" | "length" | "offset" | "centre" | "focal" | "r0" | null = null,
+  focusedStop: { id: string; index: number } | null = null,
+  hoveredStop: number | null = null,
 ) {
   const selected = nodes.filter((x) => selection.includes(x.id) && x.visible);
   if (!selected.length) return;
@@ -4559,6 +4705,49 @@ function drawGradientRadialHandle(
       ctx.moveTo(r0h.x - ux * hr * 1.4, r0h.y - uy * hr * 1.4);
       ctx.lineTo(r0h.x - ux * hr * 0.2, r0h.y - uy * hr * 0.2);
       ctx.stroke();
+    }
+    // On-canvas radial stops along the same ray (phosphor circles + percent chips)
+    const sw = radialStopWorld(n, zoom);
+    if (sw && sw.stops.length) {
+      // faint ray from inner to outer so the stop line is visible
+      const endX = sw.focal.x + sw.ux * sw.outer;
+      const endY = sw.focal.y + sw.uy * sw.outer;
+      const startX = sw.focal.x + sw.ux * sw.innerR;
+      const startY = sw.focal.y + sw.uy * sw.innerR;
+      ctx.save();
+      ctx.strokeStyle = "rgba(63, 198, 255, 0.35)";
+      ctx.lineWidth = 1 / zoom;
+      ctx.setLineDash([3 / zoom, 3 / zoom]);
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(endX, endY);
+      ctx.stroke();
+      ctx.restore();
+      const isFocusedNode = focusedStop && focusedStop.id === n.id;
+      for (let si = 0; si < sw.stops.length; si++) {
+        const st = sw.stops[si]!;
+        const sr = 4.2 / zoom;
+        ctx.beginPath();
+        ctx.arc(st.x, st.y, sr, 0, Math.PI * 2);
+        ctx.fillStyle = st.color;
+        ctx.fill();
+        ctx.strokeStyle = "#7ee0ff";
+        ctx.lineWidth = 1.4 / zoom;
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(st.x, st.y, sr + 2.2 / zoom, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(63, 198, 255, 0.55)";
+        ctx.lineWidth = 1.2 / zoom;
+        ctx.stroke();
+        const pct = Math.round(st.offset * 100);
+        const label = `${pct}%`;
+        const emphasize = !!(isFocusedNode && focusedStop.index === si) || si === hoveredStop;
+        // chip offset perpendicular to the ray
+        const off = 14 / zoom;
+        const cx = st.x - sw.uy * off;
+        const cy = st.y + sw.ux * off;
+        drawPhosphorValueChip(ctx, label, cx, cy, zoom, emphasize);
+      }
     }
   }
   ctx.restore();

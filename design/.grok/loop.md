@@ -1,6 +1,8 @@
 # The Voice Design · Improvement Loop
 
 ## Done
+- 2026-11-26T08:05Z — Denser radial dimension chips + inspector stop list label: Centre/Focal X/Y pairs side-by-side (no range sliders), Inner keeps slider; NumFields and % labels scale + dual-glow phosphor when the matching hover key is active (inspector or on-canvas). Stop bar labelled “Stops along radial ray” for radial fills. Typecheck, build, smoke clean (hub content visible, canvas present).
+- 2026-11-26T07:07Z — On-canvas radial gradient stop editing: phosphor stop circles along the radial ray (from focal/inner to outer), percent chips (emphasized on hover/drag), drag to change offset (Shift snaps, live reorder), Alt-click to remove (when >2), double-click stop for colour picker, double-click the ray to add a stop (inherits nearest colour). Uniform selection. Typecheck, build, smoke clean (hub content visible, canvas present).
 - 2026-11-26T06:10Z — Inspector stop list visual parity with on-canvas chips: stop rows, bar circles, and floating percent chips now scale + dual-glow phosphor when the stop is hovered (inspector or on-canvas). Percent field and % label brighten and grow. Cleared on leave. Typecheck, build, smoke clean (hub content visible, canvas present).
 - 2026-11-26T05:10Z — Hover-emphasize stop chips: inspector hover (stop list rows + stop bar) and on-canvas pointer hover over a linear stop circle now scale + glow the corresponding percent chip (same phosphor emphasis as dragged stops and other dimension chips). Cleared on leave. Typecheck, build, smoke clean (hub content visible, canvas present).
 - 2026-11-26T04:05Z — On-canvas stop value chips: percent next to each linear gradient stop circle (offset perpendicular to the handle). Focused/dragged stop chip scales + glows (same phosphor chip style as angle/length). Live during reorder. Typecheck, build, smoke clean (hub content visible, canvas present).
@@ -20,7 +22,7 @@
 - 2026-11-25T05:09Z — On-canvas linear gradient length / offset handle.
 
 ## Next recommended
-- Radial stop editing on-canvas (or more inspector depth for stops)
+- More mixed-selection gradient depth (uniform radial stop list + dimension chips in mixed inspector)
 
 ## Backlog
 24. Reorder gradient stops by dragging past each other (done this pass)
