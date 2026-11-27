@@ -4541,8 +4541,8 @@ function drawGradientAngleHandle(
     const sw = linearStopWorld(n, zoom);
     if (sw) {
       const isFocusedNode = focusedStop && focusedStop.id === n.id;
-      // Denser stop circles when a linear dimension is focused so they stay secondary
-      const denserStops = hoverKey === "angle" || hoverKey === "length" || hoverKey === "offset" || hoverKey === "angle-only" || hoverKey === "length-only";
+      // Denser stop circles and percent chips when a linear dimension is focused, or for mixed (multi-node) selections so they stay secondary and uncluttered
+      const denserStops = selected.length > 1 || hoverKey === "angle" || hoverKey === "length" || hoverKey === "offset" || hoverKey === "angle-only" || hoverKey === "length-only";
       const chipDraws: { label: string; cx: number; cy: number; emphasize: boolean }[] = [];
       for (let si = 0; si < sw.stops.length; si++) {
         const st = sw.stops[si]!;
@@ -4844,6 +4844,25 @@ function drawGradientRadialHandle(
         ctx.strokeStyle = "rgba(63, 198, 255, 0.45)";
         ctx.lineWidth = 2.5 / zoom;
         ctx.stroke();
+        // denser r0 handle ticks: short phosphor ticks radiate from the circle perimeter
+        ctx.save();
+        ctx.strokeStyle = "rgba(168, 240, 255, 0.78)";
+        ctx.lineWidth = 1.2 / zoom;
+        ctx.lineCap = "round";
+        const tickLen = 3.6 / zoom;
+        const numTicks = 8;
+        for (let i = 0; i < numTicks; i++) {
+          const ang = (i / numTicks) * Math.PI * 2;
+          const dx = Math.cos(ang);
+          const dy = Math.sin(ang);
+          const sx = r0h.x + dx * hr;
+          const sy = r0h.y + dy * hr;
+          ctx.beginPath();
+          ctx.moveTo(sx, sy);
+          ctx.lineTo(sx + dx * tickLen, sy + dy * tickLen);
+          ctx.stroke();
+        }
+        ctx.restore();
       }
       // small tick inward toward focal along the direction
       const len = Math.hypot(r0h.dx, r0h.dy) || 1;
@@ -4898,8 +4917,8 @@ function drawGradientRadialHandle(
       }
       ctx.restore();
       const isFocusedNode = focusedStop && focusedStop.id === n.id;
-      // Denser stop circles when a radial dimension is focused so they stay secondary
-      const denserStops = hoverKey === "centre" || hoverKey === "focal" || hoverKey === "r0";
+      // Denser stop circles and percent chips when a radial dimension is focused, or for mixed (multi-node) selections so they stay secondary and uncluttered
+      const denserStops = selected.length > 1 || hoverKey === "centre" || hoverKey === "focal" || hoverKey === "r0";
       const chipDraws: { label: string; cx: number; cy: number; emphasize: boolean }[] = [];
       for (let si = 0; si < sw.stops.length; si++) {
         const st = sw.stops[si]!;
