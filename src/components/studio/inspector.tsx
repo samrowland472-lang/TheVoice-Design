@@ -41,6 +41,7 @@ import { MixedPathDash } from "./mixed-path-dash";
 import { MixedGeometry } from "./mixed-geometry";
 import { BooleanButtons } from "./boolean-buttons";
 import { NumField } from "./num-field";
+import { ScaleScrub } from "./scale-scrub";
 import { InspectorPrint } from "./inspector-print";
 
 const EDGES: AlignEdge[] = ["left", "center", "right", "top", "middle", "bottom"];
@@ -63,6 +64,7 @@ function useAlign() {
 function useDistribute() {
   return useSyncExternalStore(subscribeDistributePreview, getDistributePreview, getDistributePreview);
 }
+
 
 export function Inspector() {
   const doc = useDesign((s) => s.doc);
@@ -299,8 +301,8 @@ export function Inspector() {
                 <div className="grid grid-cols-2 gap-2">
                   <Field label="X"><NumField value={node.x} onCommit={(v) => updateNodes([node.id], { x: v })} aria-label="x" /></Field>
                   <Field label="Y"><NumField value={node.y} onCommit={(v) => updateNodes([node.id], { y: v })} aria-label="y" /></Field>
-                  <Field label="W"><NumField value={node.w} onCommit={(v) => updateNodes([node.id], { w: Math.max(1, v) })} aria-label="w" /></Field>
-                  <Field label="H"><NumField value={node.h} onCommit={(v) => updateNodes([node.id], { h: Math.max(1, v) })} aria-label="h" /></Field>
+                  <Field label="W"><NumField value={node.w} onCommit={(v) => { updateNodes([node.id], { w: Math.max(1, v) }); useDesign.getState().setSizeScrubId(null); }} onFocus={() => useDesign.getState().setSizeScrubId(node.id)} aria-label="w" /></Field>
+                  <Field label="H"><NumField value={node.h} onCommit={(v) => { updateNodes([node.id], { h: Math.max(1, v) }); useDesign.getState().setSizeScrubId(null); }} onFocus={() => useDesign.getState().setSizeScrubId(node.id)} aria-label="h" /></Field>
                 </div>
                 <Field label={`Rotate ${Math.round(node.rotation)}°`}>
                   <input
@@ -319,6 +321,7 @@ export function Inspector() {
                     onLostPointerCapture={() => useDesign.getState().setRotationScrubId(null)}
                   />
                 </Field>
+                <ScaleScrub nodes={[node]} />
               </Section>
 
               <Section title="Appearance">
@@ -345,7 +348,16 @@ export function Inspector() {
                   <select
                     className="field"
                     value={node.blend}
-                    onChange={(e) => setBlend(e.target.value)}
+                    onChange={(e) => {
+                      const v = e.target.value as DesignNode["blend"];
+                      setBlend(v);
+                      useDesign.getState().setStrokeGhost({ blend: v });
+                      setTimeout(() => useDesign.getState().setStrokeGhost(null), 600);
+                    }}
+                    onMouseEnter={() => useDesign.getState().setStrokeGhost({ blend: node.blend })}
+                    onFocus={() => useDesign.getState().setStrokeGhost({ blend: node.blend })}
+                    onMouseLeave={() => useDesign.getState().setStrokeGhost(null)}
+                    onBlur={() => useDesign.getState().setStrokeGhost(null)}
                   >
                     {["source-over", "multiply", "screen", "overlay", "darken", "lighten"].map((b) => (
                       <option key={b} value={b}>{b}</option>
@@ -439,7 +451,22 @@ export function Inspector() {
                     className="field"
                     value={mixedBlend ? "source-over" : selectedNodes[0]?.blend ?? "source-over"}
                     aria-label={mixedBlend ? "blend mixed" : "blend"}
-                    onChange={(e) => setBlend(e.target.value)}
+                    onChange={(e) => {
+                      const v = e.target.value as DesignNode["blend"];
+                      setBlend(v);
+                      useDesign.getState().setStrokeGhost({ blend: v });
+                      setTimeout(() => useDesign.getState().setStrokeGhost(null), 600);
+                    }}
+                    onMouseEnter={() => {
+                      const cur = mixedBlend ? "source-over" : selectedNodes[0]?.blend ?? "source-over";
+                      useDesign.getState().setStrokeGhost({ blend: cur as DesignNode["blend"] });
+                    }}
+                    onFocus={() => {
+                      const cur = mixedBlend ? "source-over" : selectedNodes[0]?.blend ?? "source-over";
+                      useDesign.getState().setStrokeGhost({ blend: cur as DesignNode["blend"] });
+                    }}
+                    onMouseLeave={() => useDesign.getState().setStrokeGhost(null)}
+                    onBlur={() => useDesign.getState().setStrokeGhost(null)}
                   >
                     {["source-over", "multiply", "screen", "overlay", "darken", "lighten"].map((b) => (
                       <option key={b} value={b}>{b}</option>
