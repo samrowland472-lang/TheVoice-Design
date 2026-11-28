@@ -65,11 +65,15 @@ function MixedHexField({
   mixed,
   ariaLabel,
   onCommit,
+  onPointerDown,
+  onPointerUp,
 }: {
   value: string;
   mixed: boolean;
   ariaLabel: string;
   onCommit: (hex: string) => void;
+  onPointerDown?: () => void;
+  onPointerUp?: () => void;
 }) {
   const hex = value.startsWith("#") ? value : "#000000";
   return (
@@ -80,6 +84,10 @@ function MixedHexField({
         value={hex === "transparent" ? "#3fc6ff" : hex}
         aria-label={mixed ? `${ariaLabel} mixed` : ariaLabel}
         onChange={(e) => onCommit(e.target.value)}
+        onPointerDown={onPointerDown}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        onLostPointerCapture={onPointerUp}
       />
       <input
         className="field font-mono flex-1"
@@ -218,6 +226,8 @@ export function MixedInk({ nodes, ink }: { nodes: DesignNode[]; ink: string }) {
           mixed={mixedFill}
           ariaLabel="selection fill"
           onCommit={(hex) => { rememberColor(hex); updateNodes(ids, { fill: hex }, true); }}
+          onPointerDown={() => useDesign.getState().setSolidColorDragging(true)}
+          onPointerUp={() => useDesign.getState().setSolidColorDragging(false)}
         />
         <BrandSwatches onPick={(hex) => { rememberColor(hex); updateNodes(ids, { fill: hex }, true); }} />
         <RecentSwatches onPick={(hex) => { rememberColor(hex); updateNodes(ids, { fill: hex }, true); }} />
@@ -367,7 +377,7 @@ export function MixedInk({ nodes, ink }: { nodes: DesignNode[]; ink: string }) {
                       <path d="M1.5 3.5h7M1.5 7h7M1.5 10.5h7" strokeWidth="1.4" strokeLinecap="round" />
                     </svg>
                   </button>
-                  <HexColorField dense emphasized={active} label={`Stop ${i + 1}`} value={stop.color} onChange={(hex) => { rememberColor(hex); const stops = g.stops.map((s, j) => (j === i ? { ...s, color: hex } : s)); updateNodes(ids, { fill: { ...g, stops } }, true); }} />
+                  <HexColorField dense emphasized={active} label={`Stop ${i + 1}`} value={stop.color} onFocus={() => useDesign.getState().setGradientHoverStop(i)} onBlur={() => { if (reorderDrag !== i) useDesign.getState().setGradientHoverStop(null); }} onChange={(hex) => { rememberColor(hex); const stops = g.stops.map((s, j) => (j === i ? { ...s, color: hex } : s)); updateNodes(ids, { fill: { ...g, stops } }, true); }} />
                   <div className={cn("flex items-center gap-0.5 transition-all", active && "scale-110")}>
                     <NumField value={Math.round(stop.offset * 100)} min={0} max={100} className={cn("field w-11 font-mono text-[11px] text-right", active && "border-phosphor text-phosphor shadow-[0_0_8px_rgba(63,198,255,0.55),0_0_16px_rgba(63,198,255,0.3)] scale-105")} aria-label={`Stop ${i + 1} offset percent`} onDraft={(n) => { if (n == null || !Number.isFinite(n)) return; const off = Math.max(0, Math.min(1, n / 100)); const stops = g.stops.map((s, j) => (j === i ? { ...s, offset: off } : s)); updateNodes(ids, { fill: { ...g, stops } }, false); }} onCommit={(n) => { const off = Math.max(0, Math.min(1, n / 100)); const stops = g.stops.map((s, j) => (j === i ? { ...s, offset: off } : s)); updateNodes(ids, { fill: { ...g, stops } }, true); }} />
                     <span className={cn("text-[10px] transition-all", active ? "text-phosphor font-medium scale-110" : "text-ink-dim")}>%</span>
@@ -417,7 +427,7 @@ export function MixedInk({ nodes, ink }: { nodes: DesignNode[]; ink: string }) {
         {mixedFill && <MixedFillChips nodes={nodes} ink={ink} />}
       </Field>
       <Field label={mixedStroke ? "Stroke · mixed" : "Stroke"}>
-        <MixedHexField value={first.stroke === "transparent" ? "#3fc6ff" : first.stroke} mixed={mixedStrokeColor} ariaLabel="selection stroke" onCommit={(hex) => { rememberColor(hex); updateNodes(ids, { stroke: hex, strokeWidth: Math.max(first.strokeWidth, 1) }, true); }} />
+        <MixedHexField value={first.stroke === "transparent" ? "#3fc6ff" : first.stroke} mixed={mixedStrokeColor} ariaLabel="selection stroke" onCommit={(hex) => { rememberColor(hex); updateNodes(ids, { stroke: hex, strokeWidth: Math.max(first.strokeWidth, 1) }, true); }} onPointerDown={() => useDesign.getState().setStrokeColorDragging(true)} onPointerUp={() => useDesign.getState().setStrokeColorDragging(false)} />
         <div className="mt-1.5 flex items-center gap-2">
           <span className="text-[10px] text-ink-dim">{mixedStrokeWidth ? "Width · mixed" : "Width"}</span>
           <NumField className="field w-16 font-mono" value={first.strokeWidth} mixed={mixedStrokeWidth} min={0} max={64} aria-label="selection stroke width" onDraft={(n) => { if (n == null || !Number.isFinite(n)) return; updateNodes(ids, { strokeWidth: Math.max(0, n) }, false); }} onCommit={(n) => { updateNodes(ids, { strokeWidth: Math.max(0, n) }, true); }} />

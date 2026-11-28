@@ -59,12 +59,20 @@ export function HexColorField({
   label = "Colour",
   dense = false,
   emphasized = false,
+  onFocus,
+  onBlur,
+  onPointerDown,
+  onPointerUp,
 }: {
   value: string;
   onChange: (hex: string) => void;
   label?: string;
   dense?: boolean;
   emphasized?: boolean;
+  onFocus?: () => void;
+  onBlur?: () => void;
+  onPointerDown?: () => void;
+  onPointerUp?: () => void;
 }) {
   const safe = value && value !== "transparent" && value.startsWith("#") ? value : "#d9f5e3";
   const [draft, setDraft] = useState(safe);
@@ -95,6 +103,12 @@ export function HexColorField({
         )}
         value={safe.length === 7 ? safe : "#d9f5e3"}
         onChange={(e) => onChange(e.target.value)}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        onPointerDown={onPointerDown}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+        onLostPointerCapture={onPointerUp}
         aria-label={`${label} colour`}
       />
       <input
@@ -106,7 +120,8 @@ export function HexColorField({
         )}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
-        onBlur={commit}
+        onFocus={onFocus}
+        onBlur={(e) => { commit(); onBlur?.(); }}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();
@@ -178,6 +193,8 @@ export function FillEditor({ node }: { node: DesignNode }) {
                 rememberColor(hex);
                 updateNodes([node.id], { fill: hex }, true);
               }}
+              onPointerDown={() => useDesign.getState().setSolidColorDragging(true)}
+              onPointerUp={() => useDesign.getState().setSolidColorDragging(false)}
             />
           </div>
           <NumField
@@ -639,8 +656,14 @@ export function FillEditor({ node }: { node: DesignNode }) {
                   </svg>
                 </button>
                 <HexColorField
+                  dense
+                  emphasized={active}
                   label={`Stop ${i + 1}`}
                   value={stop.color}
+                  onFocus={() => useDesign.getState().setGradientHoverStop(i)}
+                  onBlur={() => { if (reorderDrag !== i) useDesign.getState().setGradientHoverStop(null); }}
+                  onPointerDown={() => useDesign.getState().setGradientColorDraggingStop(i)}
+                  onPointerUp={() => useDesign.getState().setGradientColorDraggingStop(null)}
                   onChange={(hex) => {
                     rememberColor(hex);
                     const stops = fill.stops.map((s, j) => (j === i ? { ...s, color: hex } : s));
@@ -820,6 +843,8 @@ export function StrokeEditor({ node }: { node: DesignNode }) {
               rememberColor(hex);
               updateNodes([node.id], { stroke: hex, strokeWidth: Math.max(width, 1) }, true);
             }}
+            onPointerDown={() => useDesign.getState().setStrokeColorDragging(true)}
+            onPointerUp={() => useDesign.getState().setStrokeColorDragging(false)}
           />
         </div>
         <NumField

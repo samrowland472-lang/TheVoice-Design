@@ -176,6 +176,9 @@ export default function CanvasStage() {
   const pathDashHoverKey = useDesign((s) => s.pathDashHoverKey);
   const gradientHoverKey = useDesign((s) => s.gradientHoverKey);
   const gradientHoverStop = useDesign((s) => s.gradientHoverStop);
+  const gradientColorDraggingStop = useDesign((s) => s.gradientColorDraggingStop);
+  const solidColorDragging = useDesign((s) => s.solidColorDragging);
+  const strokeColorDragging = useDesign((s) => s.strokeColorDragging);
   const radiusScrubId = useDesign((s) => s.radiusScrubId);
   const shadowBlurScrubId = useDesign((s) => s.shadowBlurScrubId);
   const rotationScrubId = useDesign((s) => s.rotationScrubId);
@@ -431,8 +434,14 @@ export default function CanvasStage() {
       else if (gradientHoverKey === "focal") drawRadialFocalScrubChips(ctx, doc.nodes, hoverId, selection, viewport, dpr, "focal");
     }
     const focusedStop = drag.current?.type === "gradient-stop" ? { id: drag.current.id, index: drag.current.stopIndex } : null;
-    drawGradientAngleHandle(ctx, doc.nodes, selection, viewport, dpr, gradientHoverKey, focusedStop, gradientHoverStop);
-    drawGradientRadialHandle(ctx, doc.nodes, selection, viewport, dpr, gradientHoverKey, focusedStop, gradientHoverStop);
+    drawGradientAngleHandle(ctx, doc.nodes, selection, viewport, dpr, gradientHoverKey, focusedStop, gradientHoverStop, gradientColorDraggingStop);
+    drawGradientRadialHandle(ctx, doc.nodes, selection, viewport, dpr, gradientHoverKey, focusedStop, gradientHoverStop, gradientColorDraggingStop);
+    if (solidColorDragging) {
+      drawSolidColorPreview(ctx, doc.nodes, selection, viewport, dpr);
+    }
+    if (strokeColorDragging) {
+      drawStrokeColorPreview(ctx, doc.nodes, selection, viewport, dpr);
+    }
     if (strokeGhost) {
       ctx.save();
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -842,7 +851,7 @@ export default function CanvasStage() {
       ctx.fillText(text, lx, ly);
       ctx.restore();
     }
-  }, [doc, selection, viewport, pathEditHit, pathPointSelection, marquee, knifeStroke, knifeHover, knifeResidual, scaleFlip, pathPointAlignPreview, pathPointNumericPreview, pathPointHandleNumericPreview, showTangentLengths, rotateAngle, lengthHover, rotateHover, scaleHover, distHover, flipHover, alignHover, distributePreview, distCursorLabel, flushPulse, flushPulseLag, flushPulseRotate, flushPulseSlow, flushPulseTrail, opacityScrubId, axisScrubTag, axisHoverTag, filterHoverKey, typeHoverKey, cropHoverKey, radiusScrubId, shadowBlurScrubId, rotationScrubId, shadowOxScrubId, shadowOyScrubId, shadowSpreadScrubId, strokeWidthScrubId, strokeDashScrubId, strokeDashOffsetScrubId, miterLimitScrubId, gradientAngleScrubId, radialR0ScrubId, radialCentreScrubId, radialFocalScrubId, sidesScrubId, headScaleScrubId, pathDashHoverKey, gradientHoverKey, gradientHoverStop, strokeGhost]);
+  }, [doc, selection, viewport, pathEditHit, pathPointSelection, marquee, knifeStroke, knifeHover, knifeResidual, scaleFlip, pathPointAlignPreview, pathPointNumericPreview, pathPointHandleNumericPreview, showTangentLengths, rotateAngle, lengthHover, rotateHover, scaleHover, distHover, flipHover, alignHover, distributePreview, distCursorLabel, flushPulse, flushPulseLag, flushPulseRotate, flushPulseSlow, flushPulseTrail, opacityScrubId, axisScrubTag, axisHoverTag, filterHoverKey, typeHoverKey, cropHoverKey, radiusScrubId, shadowBlurScrubId, rotationScrubId, shadowOxScrubId, shadowOyScrubId, shadowSpreadScrubId, strokeWidthScrubId, strokeDashScrubId, strokeDashOffsetScrubId, miterLimitScrubId, gradientAngleScrubId, radialR0ScrubId, radialCentreScrubId, radialFocalScrubId, sidesScrubId, headScaleScrubId, pathDashHoverKey, gradientHoverKey, gradientHoverStop, gradientColorDraggingStop, solidColorDragging, strokeColorDragging, strokeGhost]);
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -915,8 +924,14 @@ export default function CanvasStage() {
       else if (gradientHoverKey === "focal") drawRadialFocalScrubChips(ctx, doc.nodes, hoverId, selection, viewport, dpr, "focal");
     }
     const focusedStop = drag.current?.type === "gradient-stop" ? { id: drag.current.id, index: drag.current.stopIndex } : null;
-    drawGradientAngleHandle(ctx, doc.nodes, selection, viewport, dpr, gradientHoverKey, focusedStop, gradientHoverStop);
-    drawGradientRadialHandle(ctx, doc.nodes, selection, viewport, dpr, gradientHoverKey, focusedStop, gradientHoverStop);
+    drawGradientAngleHandle(ctx, doc.nodes, selection, viewport, dpr, gradientHoverKey, focusedStop, gradientHoverStop, gradientColorDraggingStop);
+    drawGradientRadialHandle(ctx, doc.nodes, selection, viewport, dpr, gradientHoverKey, focusedStop, gradientHoverStop, gradientColorDraggingStop);
+    if (solidColorDragging) {
+      drawSolidColorPreview(ctx, doc.nodes, selection, viewport, dpr);
+    }
+    if (strokeColorDragging) {
+      drawStrokeColorPreview(ctx, doc.nodes, selection, viewport, dpr);
+    }
     if (strokeGhost) {
       ctx.save();
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1292,7 +1307,7 @@ export default function CanvasStage() {
     });
     ro.observe(wrap);
     return () => ro.disconnect();
-  }, [doc, selection, viewport, pathEditHit, pathPointSelection, marquee, knifeStroke, scaleFlip, pathPointAlignPreview, pathPointNumericPreview, pathPointHandleNumericPreview, showTangentLengths, rotateAngle, lengthHover, rotateHover, scaleHover, distHover, flipHover, alignHover, distributePreview, flushPulse, flushPulseLag, flushPulseRotate, flushPulseSlow, flushPulseTrail, opacityScrubId, axisScrubTag, axisHoverTag, filterHoverKey, typeHoverKey, cropHoverKey, radiusScrubId, shadowBlurScrubId, rotationScrubId, shadowOxScrubId, shadowOyScrubId, shadowSpreadScrubId, strokeWidthScrubId, strokeDashScrubId, strokeDashOffsetScrubId, miterLimitScrubId, gradientAngleScrubId, radialR0ScrubId, radialCentreScrubId, radialFocalScrubId, sidesScrubId, headScaleScrubId, pathDashHoverKey, gradientHoverKey, gradientHoverStop, strokeGhost]);
+  }, [doc, selection, viewport, pathEditHit, pathPointSelection, marquee, knifeStroke, scaleFlip, pathPointAlignPreview, pathPointNumericPreview, pathPointHandleNumericPreview, showTangentLengths, rotateAngle, lengthHover, rotateHover, scaleHover, distHover, flipHover, alignHover, distributePreview, flushPulse, flushPulseLag, flushPulseRotate, flushPulseSlow, flushPulseTrail, opacityScrubId, axisScrubTag, axisHoverTag, filterHoverKey, typeHoverKey, cropHoverKey, radiusScrubId, shadowBlurScrubId, rotationScrubId, shadowOxScrubId, shadowOyScrubId, shadowSpreadScrubId, strokeWidthScrubId, strokeDashScrubId, strokeDashOffsetScrubId, miterLimitScrubId, gradientAngleScrubId, radialR0ScrubId, radialCentreScrubId, radialFocalScrubId, sidesScrubId, headScaleScrubId, pathDashHoverKey, gradientHoverKey, gradientHoverStop, gradientColorDraggingStop, solidColorDragging, strokeColorDragging, strokeGhost]);
 
   function onDoubleClick(e: React.MouseEvent) {
     if (!doc) return;
@@ -4351,6 +4366,7 @@ function drawGradientAngleHandle(
   hoverKey: "angle" | "length" | "offset" | "angle-only" | "length-only" | null = null,
   focusedStop: { id: string; index: number } | null = null,
   hoveredStop: number | null = null,
+  colorDraggingStop: number | null = null,
 ) {
   const selected = nodes.filter((n) => selection.includes(n.id) && n.visible);
   if (selected.length === 0) return;
@@ -4535,6 +4551,59 @@ function drawGradientAngleHandle(
         const cx = st.x + px * off;
         const cy = st.y + py * off;
         chipDraws.push({ label, cx, cy, emphasize });
+        // Colour preview highlight when this stop is focused/hovered from inspector
+        // Larger + brighter dual-glow when the inspector colour picker is being dragged
+        if (emphasize) {
+          const isDraggingColor = colorDraggingStop === si;
+          const previewOff = (isDraggingColor ? 26 : 22) / zoom;
+          const pvx = st.x - px * previewOff;
+          const pvy = st.y - py * previewOff;
+          const pw = (isDraggingColor ? 18 : 12) / zoom;
+          const ph = (isDraggingColor ? 12 : 8) / zoom;
+          ctx.save();
+          ctx.fillStyle = st.color;
+          ctx.strokeStyle = isDraggingColor ? "#a8f0ff" : "#3fc6ff";
+          ctx.lineWidth = (isDraggingColor ? 2.2 : 1.4) / zoom;
+          ctx.beginPath();
+          if (typeof ctx.roundRect === "function") {
+            ctx.roundRect(pvx - pw / 2, pvy - ph / 2, pw, ph, 1.5 / zoom);
+          } else {
+            ctx.rect(pvx - pw / 2, pvy - ph / 2, pw, ph);
+          }
+          ctx.fill();
+          ctx.stroke();
+          if (isDraggingColor) {
+            ctx.globalAlpha = 0.55;
+            ctx.lineWidth = 3.6 / zoom;
+            ctx.beginPath();
+            if (typeof ctx.roundRect === "function") {
+              ctx.roundRect(pvx - pw / 2 - 2.4 / zoom, pvy - ph / 2 - 2.4 / zoom, pw + 4.8 / zoom, ph + 4.8 / zoom, 2.2 / zoom);
+            } else {
+              ctx.rect(pvx - pw / 2 - 2.4 / zoom, pvy - ph / 2 - 2.4 / zoom, pw + 4.8 / zoom, ph + 4.8 / zoom);
+            }
+            ctx.stroke();
+            ctx.globalAlpha = 0.22;
+            ctx.lineWidth = 5.5 / zoom;
+            ctx.beginPath();
+            if (typeof ctx.roundRect === "function") {
+              ctx.roundRect(pvx - pw / 2 - 4 / zoom, pvy - ph / 2 - 4 / zoom, pw + 8 / zoom, ph + 8 / zoom, 2.8 / zoom);
+            } else {
+              ctx.rect(pvx - pw / 2 - 4 / zoom, pvy - ph / 2 - 4 / zoom, pw + 8 / zoom, ph + 8 / zoom);
+            }
+            ctx.stroke();
+          } else {
+            ctx.globalAlpha = 0.35;
+            ctx.lineWidth = 2.4 / zoom;
+            ctx.beginPath();
+            if (typeof ctx.roundRect === "function") {
+              ctx.roundRect(pvx - pw / 2 - 1.6 / zoom, pvy - ph / 2 - 1.6 / zoom, pw + 3.2 / zoom, ph + 3.2 / zoom, 2 / zoom);
+            } else {
+              ctx.rect(pvx - pw / 2 - 1.6 / zoom, pvy - ph / 2 - 1.6 / zoom, pw + 3.2 / zoom, ph + 3.2 / zoom);
+            }
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
       }
       // Draw non-emphasized chips first, then emphasized last (stronger dual-glow on top)
       for (const c of chipDraws.filter((c) => !c.emphasize)) {
@@ -4644,6 +4713,7 @@ function drawGradientRadialHandle(
   hoverKey: "angle" | "length" | "offset" | "centre" | "focal" | "r0" | null = null,
   focusedStop: { id: string; index: number } | null = null,
   hoveredStop: number | null = null,
+  colorDraggingStop: number | null = null,
 ) {
   const selected = nodes.filter((x) => selection.includes(x.id) && x.visible);
   if (!selected.length) return;
@@ -4809,6 +4879,59 @@ function drawGradientRadialHandle(
         const cx = st.x - sw.uy * off;
         const cy = st.y + sw.ux * off;
         chipDraws.push({ label, cx, cy, emphasize });
+        // Colour preview highlight when this stop is focused/hovered from inspector
+        // Larger + brighter dual-glow when the inspector colour picker is being dragged
+        if (emphasize) {
+          const isDraggingColor = colorDraggingStop === si;
+          const previewOff = (isDraggingColor ? 26 : 22) / zoom;
+          const pvx = st.x + sw.uy * previewOff;
+          const pvy = st.y - sw.ux * previewOff;
+          const pw = (isDraggingColor ? 18 : 12) / zoom;
+          const ph = (isDraggingColor ? 12 : 8) / zoom;
+          ctx.save();
+          ctx.fillStyle = st.color;
+          ctx.strokeStyle = isDraggingColor ? "#a8f0ff" : "#3fc6ff";
+          ctx.lineWidth = (isDraggingColor ? 2.2 : 1.4) / zoom;
+          ctx.beginPath();
+          if (typeof ctx.roundRect === "function") {
+            ctx.roundRect(pvx - pw / 2, pvy - ph / 2, pw, ph, 1.5 / zoom);
+          } else {
+            ctx.rect(pvx - pw / 2, pvy - ph / 2, pw, ph);
+          }
+          ctx.fill();
+          ctx.stroke();
+          if (isDraggingColor) {
+            ctx.globalAlpha = 0.55;
+            ctx.lineWidth = 3.6 / zoom;
+            ctx.beginPath();
+            if (typeof ctx.roundRect === "function") {
+              ctx.roundRect(pvx - pw / 2 - 2.4 / zoom, pvy - ph / 2 - 2.4 / zoom, pw + 4.8 / zoom, ph + 4.8 / zoom, 2.2 / zoom);
+            } else {
+              ctx.rect(pvx - pw / 2 - 2.4 / zoom, pvy - ph / 2 - 2.4 / zoom, pw + 4.8 / zoom, ph + 4.8 / zoom);
+            }
+            ctx.stroke();
+            ctx.globalAlpha = 0.22;
+            ctx.lineWidth = 5.5 / zoom;
+            ctx.beginPath();
+            if (typeof ctx.roundRect === "function") {
+              ctx.roundRect(pvx - pw / 2 - 4 / zoom, pvy - ph / 2 - 4 / zoom, pw + 8 / zoom, ph + 8 / zoom, 2.8 / zoom);
+            } else {
+              ctx.rect(pvx - pw / 2 - 4 / zoom, pvy - ph / 2 - 4 / zoom, pw + 8 / zoom, ph + 8 / zoom);
+            }
+            ctx.stroke();
+          } else {
+            ctx.globalAlpha = 0.35;
+            ctx.lineWidth = 2.4 / zoom;
+            ctx.beginPath();
+            if (typeof ctx.roundRect === "function") {
+              ctx.roundRect(pvx - pw / 2 - 1.6 / zoom, pvy - ph / 2 - 1.6 / zoom, pw + 3.2 / zoom, ph + 3.2 / zoom, 2 / zoom);
+            } else {
+              ctx.rect(pvx - pw / 2 - 1.6 / zoom, pvy - ph / 2 - 1.6 / zoom, pw + 3.2 / zoom, ph + 3.2 / zoom);
+            }
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
       }
       // Draw non-emphasized chips first, then emphasized last (stronger dual-glow on top)
       for (const c of chipDraws.filter((c) => !c.emphasize)) {
@@ -5095,6 +5218,151 @@ function drawHeadScaleScrubChips(
   );
 }
 
+
+
+/** On-canvas solid-fill colour live preview while dragging the inspector colour picker.
+ *  Draws a larger phosphor-bordered swatch with dual glow near the top-right of each
+ *  solid-filled selected node's bounding box so the live colour is obvious. */
+function drawSolidColorPreview(
+  ctx: CanvasRenderingContext2D,
+  nodes: DesignNode[],
+  selection: string[],
+  vp: Viewport,
+  dpr: number,
+) {
+  const selected = nodes.filter(
+    (n) => selection.includes(n.id) && n.visible && typeof n.fill === "string" && n.fill !== "transparent",
+  );
+  if (!selected.length) return;
+
+  ctx.save();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.translate(vp.x, vp.y);
+  ctx.scale(vp.zoom, vp.zoom);
+  const zoom = vp.zoom;
+
+  for (const n of selected) {
+    const color = n.fill as string;
+    // Position near top-right corner of the node bounds, offset outward
+    const px = n.x + n.w + 8 / zoom;
+    const py = n.y - 6 / zoom;
+    const pw = 22 / zoom;
+    const ph = 14 / zoom;
+
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.strokeStyle = "#a8f0ff";
+    ctx.lineWidth = 2.2 / zoom;
+    ctx.beginPath();
+    if (typeof ctx.roundRect === "function") {
+      ctx.roundRect(px, py, pw, ph, 1.6 / zoom);
+    } else {
+      ctx.rect(px, py, pw, ph);
+    }
+    ctx.fill();
+    ctx.stroke();
+
+    // Dual outer phosphor glow rings (brighter while dragging)
+    ctx.globalAlpha = 0.55;
+    ctx.lineWidth = 3.6 / zoom;
+    ctx.beginPath();
+    if (typeof ctx.roundRect === "function") {
+      ctx.roundRect(px - 2.4 / zoom, py - 2.4 / zoom, pw + 4.8 / zoom, ph + 4.8 / zoom, 2.2 / zoom);
+    } else {
+      ctx.rect(px - 2.4 / zoom, py - 2.4 / zoom, pw + 4.8 / zoom, ph + 4.8 / zoom);
+    }
+    ctx.stroke();
+
+    ctx.globalAlpha = 0.22;
+    ctx.lineWidth = 5.5 / zoom;
+    ctx.beginPath();
+    if (typeof ctx.roundRect === "function") {
+      ctx.roundRect(px - 4.2 / zoom, py - 4.2 / zoom, pw + 8.4 / zoom, ph + 8.4 / zoom, 2.8 / zoom);
+    } else {
+      ctx.rect(px - 4.2 / zoom, py - 4.2 / zoom, pw + 8.4 / zoom, ph + 8.4 / zoom);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+
+function drawStrokeColorPreview(
+  ctx: CanvasRenderingContext2D,
+  nodes: DesignNode[],
+  selection: string[],
+  vp: Viewport,
+  dpr: number,
+) {
+  const selected = nodes.filter(
+    (n) => selection.includes(n.id) && n.visible && typeof n.stroke === "string" && n.stroke !== "transparent" && n.strokeWidth > 0,
+  );
+  if (!selected.length) return;
+
+  ctx.save();
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.translate(vp.x, vp.y);
+  ctx.scale(vp.zoom, vp.zoom);
+  const zoom = vp.zoom;
+
+  for (const n of selected) {
+    const color = n.stroke as string;
+    // Position near bottom-right of the node bounds so it sits apart from the solid-fill chip
+    const px = n.x + n.w + 8 / zoom;
+    const py = n.y + n.h + 4 / zoom;
+    const pw = 22 / zoom;
+    const ph = 14 / zoom;
+
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.strokeStyle = "#a8f0ff";
+    ctx.lineWidth = 2.2 / zoom;
+    ctx.beginPath();
+    if (typeof ctx.roundRect === "function") {
+      ctx.roundRect(px, py, pw, ph, 1.6 / zoom);
+    } else {
+      ctx.rect(px, py, pw, ph);
+    }
+    ctx.fill();
+    ctx.stroke();
+
+    // Thin inner outline to read as stroke (not fill)
+    ctx.strokeStyle = "rgba(8,12,16,0.55)";
+    ctx.lineWidth = 1.4 / zoom;
+    ctx.beginPath();
+    if (typeof ctx.roundRect === "function") {
+      ctx.roundRect(px + 2.4 / zoom, py + 2.4 / zoom, pw - 4.8 / zoom, ph - 4.8 / zoom, 0.8 / zoom);
+    } else {
+      ctx.rect(px + 2.4 / zoom, py + 2.4 / zoom, pw - 4.8 / zoom, ph - 4.8 / zoom);
+    }
+    ctx.stroke();
+
+    // Dual outer phosphor glow rings (brighter while dragging)
+    ctx.globalAlpha = 0.55;
+    ctx.strokeStyle = "#a8f0ff";
+    ctx.lineWidth = 3.6 / zoom;
+    ctx.beginPath();
+    if (typeof ctx.roundRect === "function") {
+      ctx.roundRect(px - 2.4 / zoom, py - 2.4 / zoom, pw + 4.8 / zoom, ph + 4.8 / zoom, 2.2 / zoom);
+    } else {
+      ctx.rect(px - 2.4 / zoom, py - 2.4 / zoom, pw + 4.8 / zoom, ph + 4.8 / zoom);
+    }
+    ctx.stroke();
+
+    ctx.globalAlpha = 0.22;
+    ctx.lineWidth = 5.5 / zoom;
+    ctx.beginPath();
+    if (typeof ctx.roundRect === "function") {
+      ctx.roundRect(px - 4.2 / zoom, py - 4.2 / zoom, pw + 8.4 / zoom, ph + 8.4 / zoom, 2.8 / zoom);
+    } else {
+      ctx.rect(px - 4.2 / zoom, py - 4.2 / zoom, pw + 8.4 / zoom, ph + 8.4 / zoom);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.restore();
+}
 
 function drawSelection(
   ctx: CanvasRenderingContext2D,
