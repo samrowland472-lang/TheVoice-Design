@@ -2650,12 +2650,7 @@ export default function CanvasStage() {
       if (drag.current && drag.current.type === "gradient-stop") {
         drag.current.stopIndex = newIndex >= 0 ? newIndex : d.stopIndex;
       }
-      const reordered = newIndex >= 0 && newIndex !== d.stopIndex;
-      if (reordered && selection.length > 1) {
-        setStudioStatus(`Reorder stop ${Math.round(offset * 100)}%`);
-      } else {
-        setStudioStatus(`Stop ${Math.round(offset * 100)}%`);
-      }
+      setStudioStatus(`Stop ${Math.round(offset * 100)}%`);
       return;
     }
     if (d.type === "gradient-radial") {
@@ -4391,32 +4386,6 @@ function drawGradientAngleHandle(
     }
     ctx.stroke();
     ctx.setLineDash([]);
-    // Denser connecting line ticks when length/angle focused
-    if (activeLenOrAng) {
-      const len = Math.hypot(h.ex - h.cx, h.ey - h.cy);
-      if (len > 8 / zoom) {
-        const ux = (h.ex - h.cx) / len;
-        const uy = (h.ey - h.cy) / len;
-        const px = -uy;
-        const py = ux;
-        const tickCount = Math.max(3, Math.min(7, Math.round(len / (28 / zoom))));
-        ctx.save();
-        ctx.strokeStyle = "rgba(168, 240, 255, 0.72)";
-        ctx.lineWidth = 1.15 / zoom;
-        ctx.lineCap = "round";
-        for (let i = 1; i < tickCount; i++) {
-          const t = i / tickCount;
-          const tx = h.cx + (h.ex - h.cx) * t;
-          const ty = h.cy + (h.ey - h.cy) * t;
-          const tl = 3.4 / zoom;
-          ctx.beginPath();
-          ctx.moveTo(tx - px * tl, ty - py * tl);
-          ctx.lineTo(tx + px * tl, ty + py * tl);
-          ctx.stroke();
-        }
-        ctx.restore();
-      }
-    }
     ctx.fillStyle = activeLenOrAng ? "#7ee0ff" : "#3fc6ff";
     ctx.strokeStyle = "#7ee0ff";
     ctx.lineWidth = 1.2 / zoom;
@@ -4514,52 +4483,22 @@ function drawGradientAngleHandle(
       ctx.strokeStyle = "rgba(63, 198, 255, 0.4)";
       ctx.lineWidth = 2 / zoom;
       ctx.stroke();
-      // denser offset diamond ticks: short perpendicular phosphor ticks at each vertex
-      ctx.save();
-      ctx.strokeStyle = "rgba(168, 240, 255, 0.78)";
-      ctx.lineWidth = 1.2 / zoom;
-      ctx.lineCap = "round";
-      const tickLen = 3.6 / zoom;
-      const verts = [
-        { x: h.cx, y: h.cy - s },
-        { x: h.cx + s, y: h.cy },
-        { x: h.cx, y: h.cy + s },
-        { x: h.cx - s, y: h.cy },
-      ];
-      const dirs = [
-        { x: 0, y: -1 },
-        { x: 1, y: 0 },
-        { x: 0, y: 1 },
-        { x: -1, y: 0 },
-      ];
-      for (let i = 0; i < 4; i++) {
-        const v = verts[i]!;
-        const d = dirs[i]!;
-        ctx.beginPath();
-        ctx.moveTo(v.x, v.y);
-        ctx.lineTo(v.x + d.x * tickLen, v.y + d.y * tickLen);
-        ctx.stroke();
-      }
-      ctx.restore();
     }
     // Multi-stop handles along the visual gradient line
     const sw = linearStopWorld(n, zoom);
     if (sw) {
       const isFocusedNode = focusedStop && focusedStop.id === n.id;
-      // Denser stop circles and percent chips when a linear dimension is focused, or for mixed (multi-node) selections so they stay secondary and uncluttered
-      const denserStops = selected.length > 1 || hoverKey === "angle" || hoverKey === "length" || hoverKey === "offset" || hoverKey === "angle-only" || hoverKey === "length-only";
       const chipDraws: { label: string; cx: number; cy: number; emphasize: boolean }[] = [];
       for (let si = 0; si < sw.stops.length; si++) {
         const st = sw.stops[si]!;
         const emphasize = !!(isFocusedNode && focusedStop.index === si) || si === hoveredStop;
-        const denser = denserStops && !emphasize;
-        const sr = (emphasize ? 6.4 : denser ? 2.8 : 4.2) / zoom;
+        const sr = (emphasize ? 6.4 : 4.2) / zoom;
         ctx.beginPath();
         ctx.arc(st.x, st.y, sr, 0, Math.PI * 2);
         ctx.fillStyle = st.color;
         ctx.fill();
-        ctx.strokeStyle = emphasize ? "#a8f0ff" : denser ? "rgba(126, 224, 255, 0.75)" : "#7ee0ff";
-        ctx.lineWidth = (emphasize ? 2.2 : denser ? 0.9 : 1.4) / zoom;
+        ctx.strokeStyle = emphasize ? "#a8f0ff" : "#7ee0ff";
+        ctx.lineWidth = (emphasize ? 2.2 : 1.4) / zoom;
         ctx.stroke();
         // dual phosphor outer rings when emphasized
         if (emphasize) {
@@ -4576,30 +4515,11 @@ function drawGradientAngleHandle(
           ctx.arc(st.x, st.y, sr + 6.4 / zoom, 0, Math.PI * 2);
           ctx.stroke();
           ctx.restore();
-          // denser reorder drag ticks for mixed selections: short phosphor ticks radiate from the active stop circle while dragging
-          if (selected.length > 1 && isFocusedNode && focusedStop && focusedStop.index === si) {
-            ctx.save();
-            ctx.strokeStyle = "rgba(168, 240, 255, 0.78)";
-            ctx.lineWidth = 1.15 / zoom;
-            ctx.lineCap = "round";
-            const tickLen = 4.2 / zoom;
-            const tickCount = 6;
-            for (let ti = 0; ti < tickCount; ti++) {
-              const ang = (ti / tickCount) * Math.PI * 2;
-              const dx = Math.cos(ang);
-              const dy = Math.sin(ang);
-              ctx.beginPath();
-              ctx.moveTo(st.x + dx * sr, st.y + dy * sr);
-              ctx.lineTo(st.x + dx * (sr + tickLen), st.y + dy * (sr + tickLen));
-              ctx.stroke();
-            }
-            ctx.restore();
-          }
         } else {
           ctx.beginPath();
-          ctx.arc(st.x, st.y, sr + (denser ? 1.4 : 2.2) / zoom, 0, Math.PI * 2);
-          ctx.strokeStyle = denser ? "rgba(63, 198, 255, 0.35)" : "rgba(63, 198, 255, 0.55)";
-          ctx.lineWidth = (denser ? 0.7 : 1.2) / zoom;
+          ctx.arc(st.x, st.y, sr + 2.2 / zoom, 0, Math.PI * 2);
+          ctx.strokeStyle = "rgba(63, 198, 255, 0.55)";
+          ctx.lineWidth = 1.2 / zoom;
           ctx.stroke();
         }
         // Percent chip next to stop (emphasized when this stop is the focused/dragged one)
@@ -4615,14 +4535,43 @@ function drawGradientAngleHandle(
         const cx = st.x + px * off;
         const cy = st.y + py * off;
         chipDraws.push({ label, cx, cy, emphasize });
+        // Colour preview highlight when this stop is focused/hovered from inspector
+        if (emphasize) {
+          const previewOff = 22 / zoom;
+          const pvx = st.x - px * previewOff;
+          const pvy = st.y - py * previewOff;
+          const pw = 12 / zoom;
+          const ph = 8 / zoom;
+          ctx.save();
+          ctx.fillStyle = st.color;
+          ctx.strokeStyle = "#3fc6ff";
+          ctx.lineWidth = 1.4 / zoom;
+          ctx.beginPath();
+          if (typeof ctx.roundRect === "function") {
+            ctx.roundRect(pvx - pw / 2, pvy - ph / 2, pw, ph, 1.5 / zoom);
+          } else {
+            ctx.rect(pvx - pw / 2, pvy - ph / 2, pw, ph);
+          }
+          ctx.fill();
+          ctx.stroke();
+          ctx.globalAlpha = 0.35;
+          ctx.lineWidth = 2.4 / zoom;
+          ctx.beginPath();
+          if (typeof ctx.roundRect === "function") {
+            ctx.roundRect(pvx - pw / 2 - 1.6 / zoom, pvy - ph / 2 - 1.6 / zoom, pw + 3.2 / zoom, ph + 3.2 / zoom, 2 / zoom);
+          } else {
+            ctx.rect(pvx - pw / 2 - 1.6 / zoom, pvy - ph / 2 - 1.6 / zoom, pw + 3.2 / zoom, ph + 3.2 / zoom);
+          }
+          ctx.stroke();
+          ctx.restore();
+        }
       }
       // Draw non-emphasized chips first, then emphasized last (stronger dual-glow on top)
-      // Denser stop percent chips when a linear dimension is focused so they stay secondary
       for (const c of chipDraws.filter((c) => !c.emphasize)) {
-        drawPhosphorValueChip(ctx, c.label, c.cx, c.cy, zoom, false, denserStops);
+        drawPhosphorValueChip(ctx, c.label, c.cx, c.cy, zoom, false);
       }
       for (const c of chipDraws.filter((c) => c.emphasize)) {
-        drawPhosphorValueChip(ctx, c.label, c.cx, c.cy, zoom, true, false);
+        drawPhosphorValueChip(ctx, c.label, c.cx, c.cy, zoom, true);
       }
       // Denser linear dimension chips when a stop is focused or hovered
       if (isFocusedNode || hoveredStop != null) {
@@ -4769,26 +4718,6 @@ function drawGradientRadialHandle(
       ctx.strokeStyle = "rgba(63, 198, 255, 0.45)";
       ctx.lineWidth = 2.8 / zoom;
       ctx.stroke();
-      // denser centre cross ticks: short phosphor ticks radiate from each arm end
-      ctx.save();
-      ctx.strokeStyle = "rgba(168, 240, 255, 0.78)";
-      ctx.lineWidth = 1.2 / zoom;
-      ctx.lineCap = "round";
-      const tickLen = 3.6 / zoom;
-      const arm = r * 1.6;
-      const ends = [
-        { x: centre.x - arm, y: centre.y, dx: -1, dy: 0 },
-        { x: centre.x + arm, y: centre.y, dx: 1, dy: 0 },
-        { x: centre.x, y: centre.y - arm, dx: 0, dy: -1 },
-        { x: centre.x, y: centre.y + arm, dx: 0, dy: 1 },
-      ];
-      for (const e of ends) {
-        ctx.beginPath();
-        ctx.moveTo(e.x, e.y);
-        ctx.lineTo(e.x + e.dx * tickLen, e.y + e.dy * tickLen);
-        ctx.stroke();
-      }
-      ctx.restore();
     }
     // Focal point (inner) — smaller filled diamond
     if (focal) {
@@ -4811,33 +4740,6 @@ function drawGradientRadialHandle(
         ctx.strokeStyle = "rgba(63, 198, 255, 0.4)";
         ctx.lineWidth = 2.4 / zoom;
         ctx.stroke();
-        // denser focal diamond ticks: short phosphor ticks radiate from each vertex
-        ctx.save();
-        ctx.strokeStyle = "rgba(168, 240, 255, 0.78)";
-        ctx.lineWidth = 1.2 / zoom;
-        ctx.lineCap = "round";
-        const tickLen = 3.6 / zoom;
-        const verts = [
-          { x: focal.x, y: focal.y - fr },
-          { x: focal.x + fr, y: focal.y },
-          { x: focal.x, y: focal.y + fr },
-          { x: focal.x - fr, y: focal.y },
-        ];
-        const dirs = [
-          { x: 0, y: -1 },
-          { x: 1, y: 0 },
-          { x: 0, y: 1 },
-          { x: -1, y: 0 },
-        ];
-        for (let i = 0; i < 4; i++) {
-          const v = verts[i]!;
-          const d = dirs[i]!;
-          ctx.beginPath();
-          ctx.moveTo(v.x, v.y);
-          ctx.lineTo(v.x + d.x * tickLen, v.y + d.y * tickLen);
-          ctx.stroke();
-        }
-        ctx.restore();
       }
     }
     // Inner radius (r0) — dashed circle + phosphor handle to the right of focal
@@ -4868,25 +4770,6 @@ function drawGradientRadialHandle(
         ctx.strokeStyle = "rgba(63, 198, 255, 0.45)";
         ctx.lineWidth = 2.5 / zoom;
         ctx.stroke();
-        // denser r0 handle ticks: short phosphor ticks radiate from the circle perimeter
-        ctx.save();
-        ctx.strokeStyle = "rgba(168, 240, 255, 0.78)";
-        ctx.lineWidth = 1.2 / zoom;
-        ctx.lineCap = "round";
-        const tickLen = 3.6 / zoom;
-        const numTicks = 8;
-        for (let i = 0; i < numTicks; i++) {
-          const ang = (i / numTicks) * Math.PI * 2;
-          const dx = Math.cos(ang);
-          const dy = Math.sin(ang);
-          const sx = r0h.x + dx * hr;
-          const sy = r0h.y + dy * hr;
-          ctx.beginPath();
-          ctx.moveTo(sx, sy);
-          ctx.lineTo(sx + dx * tickLen, sy + dy * tickLen);
-          ctx.stroke();
-        }
-        ctx.restore();
       }
       // small tick inward toward focal along the direction
       const len = Math.hypot(r0h.dx, r0h.dy) || 1;
@@ -4906,55 +4789,26 @@ function drawGradientRadialHandle(
       const startX = sw.focal.x + sw.ux * sw.innerR;
       const startY = sw.focal.y + sw.uy * sw.innerR;
       ctx.save();
-      const denserRay = hoverKey === "centre" || hoverKey === "focal" || hoverKey === "r0";
-      ctx.strokeStyle = denserRay ? "rgba(126, 224, 255, 0.75)" : "rgba(63, 198, 255, 0.35)";
-      ctx.lineWidth = denserRay ? 1.6 / zoom : 1 / zoom;
-      ctx.setLineDash(denserRay ? [2.2 / zoom, 2.2 / zoom] : [3 / zoom, 3 / zoom]);
+      ctx.strokeStyle = "rgba(63, 198, 255, 0.35)";
+      ctx.lineWidth = 1 / zoom;
+      ctx.setLineDash([3 / zoom, 3 / zoom]);
       ctx.beginPath();
       ctx.moveTo(startX, startY);
       ctx.lineTo(endX, endY);
       ctx.stroke();
-      ctx.setLineDash([]);
-      // Denser handle ticks along the ray when a radial dimension is focused
-      if (denserRay) {
-        const rayLen = Math.hypot(endX - startX, endY - startY);
-        if (rayLen > 12 / zoom) {
-          const ux = (endX - startX) / rayLen;
-          const uy = (endY - startY) / rayLen;
-          const px = -uy;
-          const py = ux;
-          const tickCount = Math.max(3, Math.min(6, Math.round(rayLen / (32 / zoom))));
-          ctx.strokeStyle = "rgba(168, 240, 255, 0.68)";
-          ctx.lineWidth = 1.05 / zoom;
-          ctx.lineCap = "round";
-          for (let i = 1; i < tickCount; i++) {
-            const t = i / tickCount;
-            const tx = startX + (endX - startX) * t;
-            const ty = startY + (endY - startY) * t;
-            const tl = 2.8 / zoom;
-            ctx.beginPath();
-            ctx.moveTo(tx - px * tl, ty - py * tl);
-            ctx.lineTo(tx + px * tl, ty + py * tl);
-            ctx.stroke();
-          }
-        }
-      }
       ctx.restore();
       const isFocusedNode = focusedStop && focusedStop.id === n.id;
-      // Denser stop circles and percent chips when a radial dimension is focused, or for mixed (multi-node) selections so they stay secondary and uncluttered
-      const denserStops = selected.length > 1 || hoverKey === "centre" || hoverKey === "focal" || hoverKey === "r0";
       const chipDraws: { label: string; cx: number; cy: number; emphasize: boolean }[] = [];
       for (let si = 0; si < sw.stops.length; si++) {
         const st = sw.stops[si]!;
         const emphasize = !!(isFocusedNode && focusedStop.index === si) || si === hoveredStop;
-        const denser = denserStops && !emphasize;
-        const sr = (emphasize ? 6.4 : denser ? 2.8 : 4.2) / zoom;
+        const sr = (emphasize ? 6.4 : 4.2) / zoom;
         ctx.beginPath();
         ctx.arc(st.x, st.y, sr, 0, Math.PI * 2);
         ctx.fillStyle = st.color;
         ctx.fill();
-        ctx.strokeStyle = emphasize ? "#a8f0ff" : denser ? "rgba(126, 224, 255, 0.75)" : "#7ee0ff";
-        ctx.lineWidth = (emphasize ? 2.2 : denser ? 0.9 : 1.4) / zoom;
+        ctx.strokeStyle = emphasize ? "#a8f0ff" : "#7ee0ff";
+        ctx.lineWidth = (emphasize ? 2.2 : 1.4) / zoom;
         ctx.stroke();
         // dual phosphor outer rings when emphasized
         if (emphasize) {
@@ -4971,30 +4825,11 @@ function drawGradientRadialHandle(
           ctx.arc(st.x, st.y, sr + 6.4 / zoom, 0, Math.PI * 2);
           ctx.stroke();
           ctx.restore();
-          // denser reorder drag ticks for mixed selections: short phosphor ticks radiate from the active stop circle while dragging
-          if (selected.length > 1 && isFocusedNode && focusedStop && focusedStop.index === si) {
-            ctx.save();
-            ctx.strokeStyle = "rgba(168, 240, 255, 0.78)";
-            ctx.lineWidth = 1.15 / zoom;
-            ctx.lineCap = "round";
-            const tickLen = 4.2 / zoom;
-            const tickCount = 6;
-            for (let ti = 0; ti < tickCount; ti++) {
-              const ang = (ti / tickCount) * Math.PI * 2;
-              const dx = Math.cos(ang);
-              const dy = Math.sin(ang);
-              ctx.beginPath();
-              ctx.moveTo(st.x + dx * sr, st.y + dy * sr);
-              ctx.lineTo(st.x + dx * (sr + tickLen), st.y + dy * (sr + tickLen));
-              ctx.stroke();
-            }
-            ctx.restore();
-          }
         } else {
           ctx.beginPath();
-          ctx.arc(st.x, st.y, sr + (denser ? 1.4 : 2.2) / zoom, 0, Math.PI * 2);
-          ctx.strokeStyle = denser ? "rgba(63, 198, 255, 0.35)" : "rgba(63, 198, 255, 0.55)";
-          ctx.lineWidth = (denser ? 0.7 : 1.2) / zoom;
+          ctx.arc(st.x, st.y, sr + 2.2 / zoom, 0, Math.PI * 2);
+          ctx.strokeStyle = "rgba(63, 198, 255, 0.55)";
+          ctx.lineWidth = 1.2 / zoom;
           ctx.stroke();
         }
         const pct = Math.round(st.offset * 100);
@@ -5004,14 +4839,43 @@ function drawGradientRadialHandle(
         const cx = st.x - sw.uy * off;
         const cy = st.y + sw.ux * off;
         chipDraws.push({ label, cx, cy, emphasize });
+        // Colour preview highlight when this stop is focused/hovered from inspector
+        if (emphasize) {
+          const previewOff = 22 / zoom;
+          const pvx = st.x + sw.uy * previewOff;
+          const pvy = st.y - sw.ux * previewOff;
+          const pw = 12 / zoom;
+          const ph = 8 / zoom;
+          ctx.save();
+          ctx.fillStyle = st.color;
+          ctx.strokeStyle = "#3fc6ff";
+          ctx.lineWidth = 1.4 / zoom;
+          ctx.beginPath();
+          if (typeof ctx.roundRect === "function") {
+            ctx.roundRect(pvx - pw / 2, pvy - ph / 2, pw, ph, 1.5 / zoom);
+          } else {
+            ctx.rect(pvx - pw / 2, pvy - ph / 2, pw, ph);
+          }
+          ctx.fill();
+          ctx.stroke();
+          ctx.globalAlpha = 0.35;
+          ctx.lineWidth = 2.4 / zoom;
+          ctx.beginPath();
+          if (typeof ctx.roundRect === "function") {
+            ctx.roundRect(pvx - pw / 2 - 1.6 / zoom, pvy - ph / 2 - 1.6 / zoom, pw + 3.2 / zoom, ph + 3.2 / zoom, 2 / zoom);
+          } else {
+            ctx.rect(pvx - pw / 2 - 1.6 / zoom, pvy - ph / 2 - 1.6 / zoom, pw + 3.2 / zoom, ph + 3.2 / zoom);
+          }
+          ctx.stroke();
+          ctx.restore();
+        }
       }
       // Draw non-emphasized chips first, then emphasized last (stronger dual-glow on top)
-      // Denser stop percent chips when a radial dimension is focused so they stay secondary
       for (const c of chipDraws.filter((c) => !c.emphasize)) {
-        drawPhosphorValueChip(ctx, c.label, c.cx, c.cy, zoom, false, denserStops);
+        drawPhosphorValueChip(ctx, c.label, c.cx, c.cy, zoom, false);
       }
       for (const c of chipDraws.filter((c) => c.emphasize)) {
-        drawPhosphorValueChip(ctx, c.label, c.cx, c.cy, zoom, true, false);
+        drawPhosphorValueChip(ctx, c.label, c.cx, c.cy, zoom, true);
       }
       // Denser radial dimension chips when a stop is focused or hovered
       if (isFocusedNode || hoveredStop != null) {
